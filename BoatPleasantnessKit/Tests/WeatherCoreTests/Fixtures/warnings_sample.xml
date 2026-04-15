@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rss version="2.0">
+    <channel>
+        <title>Marine Warnings</title>
+        <item>
+            <title>Strong Wind Warning for Sydney Coast</title>
+            <link>http://example.com/warning1</link>
+        </item>
+        <item>
+            <title>Hazardous Surf Warning</title>
+            <link>http://example.com/warning2</link>
+        </item>
+    </channel>
+</rss>

@@ -1,0 +1,10 @@
+{
+  "hourly": {
+    "time": [],
+    "temperature_2m": [],
+    "windspeed_10m": [],
+    "windgusts_10m": [],
+    "precipitation_probability": [],
+    "cloudcover": []
+  }
+}

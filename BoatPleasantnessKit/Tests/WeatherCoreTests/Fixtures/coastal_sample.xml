@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<product version="1.7">
+    <amoc>
+        <identifier>IDN11001</identifier>
+        <issue-time-utc>2026-04-13T00:00:00Z</issue-time-utc>
+    </amoc>
+    <forecast>
+        <area aac="NSW_MW004" description="Sydney Coast: Broken Bay to Port Hacking" type="coast">
+            <forecast-period index="1" start-time-utc="2026-04-13T00:00:00Z" end-time-utc="2026-04-14T00:00:00Z">
+                <text type="forecast_winds">Southerly 10 to 15 knots.</text>
+                <text type="forecast_seas">Around 1 metre.</text>
+                <text type="forecast_swell1">Southerly 1 to 2 metres.</text>
+                <text type="forecast_weather">Sunny.</text>
+            </forecast-period>
+        </area>
+    </forecast>
+</product>

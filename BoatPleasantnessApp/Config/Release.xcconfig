@@ -1,0 +1,5 @@
+#include "Base.xcconfig"
+
+SWIFT_COMPILATION_MODE = wholemodule
+COPY_PHASE_STRIP = YES
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
