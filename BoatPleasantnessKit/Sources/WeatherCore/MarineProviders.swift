@@ -1,27 +1,27 @@
 import Foundation
 
-public protocol MarineForecastProvider {
+public protocol MarineForecastProvider: Sendable {
     func fetchForecast(location: BoatingLocation, feed: MarineFeedConfig, days: Int) async throws -> [MarineForecast]
 }
 
-public protocol MarineObservationProvider {
+public protocol MarineObservationProvider: Sendable {
     func fetchLatestObservation(location: BoatingLocation, feed: MarineFeedConfig) async throws -> MarineObservation?
 }
 
-public protocol MarineWarningProvider {
+public protocol MarineWarningProvider: Sendable {
     func fetchWarnings(location: BoatingLocation, feed: MarineFeedConfig) async throws -> [MarineWarning]
 }
 
-public protocol TidePredictionProvider {
+public protocol TidePredictionProvider: Sendable {
     func fetchTides(location: BoatingLocation, days: Int) async throws -> [TidePrediction]
 }
 
-public protocol WaveProvider {
+public protocol WaveProvider: Sendable {
     func fetchWaveForecast(location: BoatingLocation, days: Int) async throws -> [WaveForecast]
     func fetchWaveObservation(location: BoatingLocation) async throws -> [WaveObservation]
 }
 
-public struct ProviderFacade {
+public struct ProviderFacade: Sendable {
     public var forecastProvider: MarineForecastProvider
     public var observationProvider: MarineObservationProvider
     public var warningProvider: MarineWarningProvider
@@ -40,7 +40,7 @@ public struct ProviderFacade {
     }
 }
 
-public struct BOMMarineForecastProvider: MarineForecastProvider {
+public struct BOMMarineForecastProvider: MarineForecastProvider, Sendable {
     private let client: BOMHTTPClient
     private let calendar: Calendar
 
@@ -92,7 +92,7 @@ public struct BOMMarineForecastProvider: MarineForecastProvider {
     }
 }
 
-public struct BOMObservationProvider: MarineObservationProvider {
+public struct BOMObservationProvider: MarineObservationProvider, Sendable {
     private let client: BOMHTTPClient
 
     public init(client: BOMHTTPClient = .init()) {
@@ -141,7 +141,7 @@ public struct BOMObservationProvider: MarineObservationProvider {
     }
 }
 
-public struct BOMWarningProvider: MarineWarningProvider {
+public struct BOMWarningProvider: MarineWarningProvider, Sendable {
     private let client: BOMHTTPClient
 
     public init(client: BOMHTTPClient = .init()) {
@@ -184,45 +184,7 @@ public struct BOMWarningProvider: MarineWarningProvider {
     }
 }
 
-public struct WorldTidesPredictionProvider: TidePredictionProvider {
-    private let client: TideClient
-    private let calendar: Calendar
-
-    public init(client: TideClient = .init(), calendar: Calendar = .current) {
-        self.client = client
-        self.calendar = calendar
-    }
-
-    public func fetchTides(location: BoatingLocation, days: Int) async throws -> [TidePrediction] {
-        let summaries = try await client.fetchDailySummaries(
-            location: MarineLocation(name: location.name, latitude: location.latitude, longitude: location.longitude, timeZoneID: location.timeZoneID),
-            days: days
-        )
-        let now = Date()
-        return summaries.keys.sorted().compactMap { day in
-            guard let summary = summaries[day] else { return nil }
-            let start = calendar.startOfDay(for: day)
-            let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
-            return TidePrediction(
-                locationID: location.id,
-                window: ValidityWindow(startUTC: start, endUTC: end),
-                events: [],
-                suitability: FieldValue(value: summary.suitability, state: .available),
-                summary: summary.summary,
-                freshness: .fresh,
-                provenance: ProvenanceRef(
-                    provider: "worldtides",
-                    product: "daily-extremes-summary",
-                    sourceObjectID: location.bindings.tideStationID,
-                    fetchedAtUTC: now,
-                    parsedAtUTC: now
-                )
-            )
-        }
-    }
-}
-
-public struct TideForecastPredictionProvider: TidePredictionProvider {
+public struct TideForecastPredictionProvider: TidePredictionProvider, Sendable {
     private let provider: TideDataProvider
     private let calendar: Calendar
 

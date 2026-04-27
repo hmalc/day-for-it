@@ -91,9 +91,9 @@ public struct DailyMarineSummary: Sendable, Equatable, Identifiable {
 
 public struct MarineForecastOutput: Sendable, Equatable {
     public enum DataQuality: String, Sendable, Equatable {
-        case hybrid
-        case bomFallback
-        case minimal
+        case official = "Official"
+        case officialForecastOnly = "Official forecast only"
+        case minimal = "Unavailable"
     }
 
     public var location: MarineLocation

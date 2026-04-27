@@ -29,10 +29,10 @@ enum CalmnessVisualStyle {
 
     var tint: Color {
         switch self {
-        case .calm: return Color(red: 0.49, green: 0.70, blue: 0.72)
-        case .okay: return Color(red: 0.48, green: 0.62, blue: 0.80)
-        case .caution: return Color(red: 0.78, green: 0.64, blue: 0.42)
-        case .notRecommended: return Color(red: 0.72, green: 0.43, blue: 0.40)
+        case .calm: return Color(red: 0.20, green: 0.68, blue: 0.38)
+        case .okay: return Color(red: 0.18, green: 0.46, blue: 0.90)
+        case .caution: return Color(red: 0.92, green: 0.58, blue: 0.18)
+        case .notRecommended: return Color(red: 0.88, green: 0.26, blue: 0.26)
         }
     }
 }
@@ -55,15 +55,15 @@ struct CardSurfaceModifier: ViewModifier {
                         .fill(Color(uiColor: .secondarySystemGroupedBackground))
                         .overlay(
                             RoundedRectangle(cornerRadius: BoatingUITheme.heroRadius, style: .continuous)
-                                .fill(style.tint.opacity(0.16))
+                                .fill(style.tint.opacity(0.10))
                         )
                         .overlay(alignment: .top) {
                             RoundedRectangle(cornerRadius: BoatingUITheme.heroRadius, style: .continuous)
-                                .strokeBorder(.white.opacity(0.3), lineWidth: 0.5)
+                                .strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
                                 .mask(Rectangle().frame(height: 80))
                         }
                 )
-                .shadow(color: .black.opacity(0.07), radius: 8, x: 0, y: 3)
+                .shadow(color: style.tint.opacity(0.08), radius: 7, x: 0, y: 3)
         case .metric:
             content
                 .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: BoatingUITheme.metricRadius, style: .continuous))

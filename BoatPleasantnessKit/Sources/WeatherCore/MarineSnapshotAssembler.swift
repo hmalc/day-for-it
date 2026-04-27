@@ -1,7 +1,7 @@
 import Foundation
 import PleasantnessEngine
 
-public struct MarineSnapshotAssembler {
+public struct MarineSnapshotAssembler: Sendable {
     private let calendar: Calendar
 
     public init(calendar: Calendar = .current) {
@@ -43,11 +43,12 @@ public struct MarineSnapshotAssembler {
                 item.window.startUTC < end && item.window.endUTC > start
             }
 
-            let warningSeverity = strongestWarningSeverity(snapshot.warnings)
+            let relevantWarnings = warnings(in: snapshot.warnings, for: window, asOf: snapshot.asOfUTC)
+            let warningSeverity = strongestWarningSeverity(relevantWarnings)
             var provenanceRefs: [ProvenanceRef] = []
             if let p = dayForecast?.provenance { provenanceRefs.append(p) }
             if let p = dayTide?.provenance { provenanceRefs.append(p) }
-            if let p = snapshot.warnings.first?.provenance { provenanceRefs.append(p) }
+            if let p = relevantWarnings.first?.provenance { provenanceRefs.append(p) }
 
             return AssessmentInput(
                 locationID: snapshot.locationID,
@@ -70,12 +71,16 @@ public struct MarineSnapshotAssembler {
         let daily = assessmentInputs.prefix(max(1, forecastDays)).map { input in
             let warning = input.warningSeverity.value
             let hasStrongWarning = warning == .strong || warning == .severe
+            let matchingForecast = snapshot.forecast.first { item in
+                item.validFor.startUTC < input.targetWindow.endUTC && item.validFor.endUTC > input.targetWindow.startUTC
+            }
 
             let score = BoatDayScorer.score(
                 windKmh: input.forecastWindKmh.value,
                 tideSuitability: input.tideSuitability.value,
                 rainProbability: input.rainProbability.value,
-                hasStrongWarning: hasStrongWarning
+                hasStrongWarning: hasStrongWarning,
+                waveHeightM: matchingForecast?.waveHeightM.value
             )
 
             var drivers = score.reasons
@@ -83,13 +88,19 @@ public struct MarineSnapshotAssembler {
                 drivers.append(tideSummary)
             }
 
-            let available = input.forecastWindKmh.value != nil || input.tideSuitability.value != nil
+            let hasWind = input.forecastWindKmh.value != nil
+            let hasTide = input.tideSuitability.value != nil
+            let hasSea = matchingForecast?.waveHeightM.value != nil
+            let hasRain = input.rainProbability.value != nil
+            let signalCount = [hasWind, hasTide, hasSea, hasRain].filter { $0 }.count
+            let available = matchingForecast != nil || hasTide
+            let confidence = signalCount >= 3 ? "high" : signalCount >= 2 ? "medium" : "low"
             return DailyMarineSummary(
                 dayStart: input.targetWindow.startUTC,
                 pleasantness: available ? score.score : nil,
                 rating: available ? score.rating : .amber,
                 availability: available ? .available : .unavailable,
-                confidence: available ? "medium" : "low",
+                confidence: confidence,
                 warningLimited: hasStrongWarning,
                 topDrivers: Array(drivers.prefix(3))
             )
@@ -98,8 +109,8 @@ public struct MarineSnapshotAssembler {
         let warnings = snapshot.warnings.map { warning in
             MarineWarningItem(title: warning.headline, link: warning.provenance.rawPayloadRef ?? "")
         }
-        let degradedReason = snapshot.tides.isEmpty ? "Using BOM wind/weather only; tide provider unavailable." : nil
-        let dataQuality: MarineForecastOutput.DataQuality = snapshot.tides.isEmpty ? .bomFallback : .hybrid
+        let degradedReason = snapshot.tides.isEmpty ? "Official tide data unavailable; using Bureau marine forecast and warnings only." : nil
+        let dataQuality: MarineForecastOutput.DataQuality = snapshot.tides.isEmpty ? .officialForecastOnly : .official
 
         return MarineForecastOutput(
             location: requestLocation,
@@ -127,6 +138,15 @@ public struct MarineSnapshotAssembler {
             return FieldValue(value: nil, state: .notProvided, reason: "No warnings feed")
         }
         return FieldValue(value: top, state: .available)
+    }
+
+    private func warnings(in warnings: [MarineWarning], for window: ValidityWindow, asOf: Date) -> [MarineWarning] {
+        warnings.filter { warning in
+            if let validWindow = warning.validWindow {
+                return validWindow.startUTC < window.endUTC && validWindow.endUTC > window.startUTC
+            }
+            return calendar.isDate(window.startUTC, inSameDayAs: asOf)
+        }
     }
 
     private func severityRank(lhs: MarineWarningSeverity, rhs: MarineWarningSeverity) -> Bool {

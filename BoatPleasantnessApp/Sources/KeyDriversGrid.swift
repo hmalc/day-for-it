@@ -17,15 +17,6 @@ struct KeyDriversGrid: View {
     }
 }
 
-struct DriverMetric: Identifiable {
-    let id = UUID()
-    let symbol: String
-    let label: String
-    let value: String
-    let detail: String
-    let accent: Color?
-}
-
 struct DriverMetricCard: View {
     let item: DriverMetric
 

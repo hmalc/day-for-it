@@ -82,10 +82,15 @@ private final class MarineWarningsRSSDelegate: NSObject, XMLParserDelegate {
         } else if elementName == "link" {
             currentLink = trimmed
         } else if elementName == "item" {
-            if let title = currentTitle, let link = currentLink, !title.isEmpty, !link.isEmpty {
+            if let title = currentTitle, let link = currentLink, !title.isEmpty, !link.isEmpty, !Self.isSummaryOnly(title) {
                 items.append(MarineWarningItem(title: title, link: link))
             }
             inItem = false
         }
+    }
+
+    private static func isSummaryOnly(_ title: String) -> Bool {
+        let lower = title.lowercased()
+        return lower.contains("warning summary")
     }
 }

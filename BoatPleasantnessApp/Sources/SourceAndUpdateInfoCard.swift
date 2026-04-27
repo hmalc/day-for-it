@@ -10,8 +10,8 @@ struct SourceAndUpdateInfoCard: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Source and update info")
                 .font(.headline.weight(.semibold))
-            infoRow("Updated", value: generatedAt.map(Self.relativeFormatter.localizedString(for:relativeTo:)) ?? "Pending")
-            infoRow("Data quality", value: quality?.rawValue.capitalized ?? "Unavailable")
+            infoRow("Updated", value: generatedAt.map { Self.relativeFormatter.localizedString(for: $0, relativeTo: Date()) } ?? "Pending")
+            infoRow("Data quality", value: quality?.rawValue ?? "Unavailable")
             Text(disclaimer)
                 .font(.footnote)
                 .foregroundStyle(.secondary)

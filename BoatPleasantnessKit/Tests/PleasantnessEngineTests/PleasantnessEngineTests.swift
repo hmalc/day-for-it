@@ -36,4 +36,31 @@ final class PleasantnessEngineTests: XCTestCase {
         XCTAssertEqual(out.rating, .red)
         XCTAssertLessThanOrEqual(out.score, 30)
     }
+
+    func testBoatDayScorerUsesSeaStateAndPlainMissingSignalCopy() {
+        let out = BoatDayScorer.score(
+            windKmh: nil,
+            tideSuitability: 0.8,
+            rainProbability: 0.1,
+            hasStrongWarning: false,
+            waveHeightM: 2.2
+        )
+
+        XCTAssertTrue(out.reasons.contains("Wind detail pending"))
+        XCTAssertTrue(out.reasons.contains("Rough seas"))
+        XCTAssertFalse(out.reasons.contains { $0.localizedCaseInsensitiveContains("signal limited") })
+    }
+
+    func testBoatDayScorerDoesNotAverageAwayRoughSeas() {
+        let out = BoatDayScorer.score(
+            windKmh: 10,
+            tideSuitability: 0.9,
+            rainProbability: 0.0,
+            hasStrongWarning: false,
+            waveHeightM: 2.0
+        )
+
+        XCTAssertEqual(out.rating, .red)
+        XCTAssertLessThanOrEqual(out.score, 40)
+    }
 }

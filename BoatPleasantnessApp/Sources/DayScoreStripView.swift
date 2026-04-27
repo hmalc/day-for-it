@@ -17,7 +17,7 @@ struct DayScoreStripView: View {
                             Text(shortWeekday(day.dayStart))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
-                            Text("\(Int(day.pleasantness.rounded()))")
+                            Text(day.pleasantness.map { "\(Int($0.rounded()))" } ?? "--")
                                 .font(.headline.monospacedDigit())
                             Circle()
                                 .fill(colorForScore(day.pleasantness))
@@ -41,7 +41,8 @@ struct DayScoreStripView: View {
         return f.string(from: date)
     }
 
-    private func colorForScore(_ score: Double) -> Color {
+    private func colorForScore(_ score: Double?) -> Color {
+        guard let score else { return .secondary.opacity(0.5) }
         if score >= 75 { return .green }
         if score >= 55 { return .yellow }
         if score >= 35 { return .orange }

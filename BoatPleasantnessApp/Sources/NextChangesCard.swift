@@ -19,13 +19,6 @@ struct NextChangesCard: View {
     }
 }
 
-struct NextChangeItem: Identifiable {
-    let id = UUID()
-    let symbol: String
-    let title: String
-    let detail: String
-}
-
 struct NextChangeRow: View {
     let item: NextChangeItem
 

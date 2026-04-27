@@ -24,9 +24,3 @@ struct DetailedConditionsCard: View {
         .cardSurface(.section)
     }
 }
-
-struct ConditionRow: Identifiable {
-    let id = UUID()
-    let label: String
-    let value: String
-}

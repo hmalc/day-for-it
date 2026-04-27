@@ -59,7 +59,10 @@ struct TideProbe: Equatable {
     let isEstimated: Bool
 }
 
-struct TideCardViewData {
+struct TideCardViewData: Identifiable {
+    let id: Date
+    let dayLabel: String
+    let windowLabel: String
     let stateLabel: String
     let nextHigh: TideEventViewPoint?
     let nextLow: TideEventViewPoint?
@@ -82,14 +85,17 @@ struct FourDayOutlookItem: Identifiable {
 
 struct FourDayDetailPage: Identifiable {
     let id = UUID()
+    let sourceIndex: Int
     let dayLabel: String
     let dateText: String
     let rating: BoatDayRating
+    let scoreValue: Double?
     let scoreText: String
-    let availabilityText: String
+    let summaryText: String
     let confidenceText: String
     let warningText: String
     let topDrivers: [String]
+    let isBest: Bool
 }
 
 struct HeroOpportunitySummary {
@@ -107,7 +113,7 @@ final class AppModel: ObservableObject {
     @Published var selectedDayIndex = 0
     @Published var output: MarineForecastOutput?
     @Published var warningBanner: String?
-    @Published var disclaimer = "For planning only. Always check official BOM forecasts and warnings."
+    @Published var disclaimer = "For planning only. Uses Bureau marine data and Queensland Government tide data where available."
     @Published var savedOverride: StoredLocation?
     @Published var tideForecast: TideForecast?
     @Published var tideStatusMessage: String?
@@ -118,6 +124,7 @@ final class AppModel: ObservableObject {
     private let locationStore: LocationStore
     private let tideProvider: TideDataProvider
     private let tideStore: TideStore
+    private var pendingCurrentLocationSelection = false
 
     init(
         locationManager: LocationManager = .init(),
@@ -134,12 +141,17 @@ final class AppModel: ObservableObject {
         tideForecast = tideStore.load()
         self.locationManager.onCoordinateUpdate = { [weak self] _ in
             guard let self else { return }
-            guard self.savedOverride == nil else { return }
-            Task { await self.refresh() }
+            if self.pendingCurrentLocationSelection {
+                self.applyCurrentLocationIfAvailable()
+            }
         }
     }
 
     var hasData: Bool { output != nil }
+
+    var availableQueenslandLocations: [QueenslandLocationPreset] {
+        QueenslandLocationPreset.all
+    }
 
     var currentIndex: Double {
         output?.daily[safe: selectedDayIndex]?.pleasantness ?? 0
@@ -153,23 +165,41 @@ final class AppModel: ObservableObject {
         selectedDaySummary?.topDrivers ?? []
     }
 
+    var activeLocationName: String {
+        output?.location.name ?? effectiveLocation().name
+    }
+
     private var fourDayWindow: [DailyMarineSummary] {
-        Array(displayDays.prefix(4))
+        forecastDisplayWindow.map(\.day)
+    }
+
+    private var forecastDisplayWindow: [(sourceIndex: Int, day: DailyMarineSummary)] {
+        let indexedDays = Array(displayDays.enumerated()).map { (sourceIndex: $0.offset, day: $0.element) }
+        let firstFour = Array(indexedDays.prefix(4))
+        let available = firstFour.filter { item in
+            item.day.availability == .available || item.day.pleasantness != nil
+        }
+        return available.isEmpty ? firstFour : available
     }
 
     var heroOpportunitySummary: HeroOpportunitySummary {
         let window = fourDayWindow
         guard !window.isEmpty else {
             return HeroOpportunitySummary(
-                headline: "Checking next 4 days",
-                subheadline: "Forecast loading. We will highlight the best boating window shortly.",
+                headline: "Checking the ocean",
+                subheadline: "Forecast loading.",
                 tone: .amber,
-                badgeText: "4-DAY LOOK",
+                badgeText: "CHECKING",
                 focusDrivers: []
             )
         }
 
-        let ranked = window.enumerated().sorted { lhs, rhs in
+        let usable = window.enumerated().filter { _, day in
+            day.rating == .green || day.rating == .amber
+        }
+        let easy = usable.filter { _, day in day.rating == .green }
+        let careful = usable.filter { _, day in day.rating == .amber }
+        let rankedUsable = usable.sorted { lhs, rhs in
             let left = lhs.element.pleasantness ?? scoreFallback(for: lhs.element.rating)
             let right = rhs.element.pleasantness ?? scoreFallback(for: rhs.element.rating)
             if left == right {
@@ -177,54 +207,76 @@ final class AppModel: ObservableObject {
             }
             return left > right
         }
-        guard let best = ranked.first else {
+        let rankedAll = window.enumerated().sorted { lhs, rhs in
+            let left = lhs.element.pleasantness ?? scoreFallback(for: lhs.element.rating)
+            let right = rhs.element.pleasantness ?? scoreFallback(for: rhs.element.rating)
+            if left == right {
+                return lhs.offset < rhs.offset
+            }
+            return left > right
+        }
+
+        guard let leadWindow = rankedUsable.first ?? rankedAll.first else {
             return HeroOpportunitySummary(
-                headline: "No clear window yet",
+                headline: "No clear ocean window yet",
                 subheadline: "Data is limited right now. Pull to refresh for better guidance.",
                 tone: .amber,
-                badgeText: "4-DAY LOOK",
+                badgeText: "CHECKING",
                 focusDrivers: []
             )
         }
 
-        let bestDay = best.element
-        let bestLabel = dayLabel(for: bestDay.dayStart, index: best.offset)
-        let focusReason = conciseReason(from: bestDay.topDrivers) ?? "Window quality depends on wind, sea state, and tide timing."
+        let leadDay = leadWindow.element
+        let usableLabels = usable
+            .prefix(3)
+            .map { dayLabel(for: $0.element.dayStart, index: $0.offset) }
+        let focusReason = conciseReason(from: leadDay.topDrivers) ?? "Window quality depends on wind, sea state, and tide timing."
 
-        switch bestDay.rating {
-        case .green:
-            let headline = best.offset == 0 ? "Today looks like your best boating window" : "Best boating chance looks like \(bestLabel)"
+        if !easy.isEmpty {
+            let headline: String
+            if usableLabels.count == 1 {
+                headline = "Go: \(usableLabels[0])"
+            } else {
+                headline = "Go: \(usableLabels.joined(separator: ", "))"
+            }
             return HeroOpportunitySummary(
                 headline: headline,
                 subheadline: focusReason,
                 tone: .green,
-                badgeText: best.offset == 0 ? "FAVORABLE" : "LOOK TO \(bestLabel.uppercased())",
-                focusDrivers: bestDay.topDrivers
-            )
-        case .amber:
-            let headline = best.offset == 0 ? "Today can work with careful timing" : "\(bestLabel) may work if you time it right"
-            return HeroOpportunitySummary(
-                headline: headline,
-                subheadline: "Conditions are manageable with careful timing. \(focusReason)",
-                tone: .amber,
-                badgeText: best.offset == 0 ? "TIME CAREFULLY" : "WATCH \(bestLabel.uppercased())",
-                focusDrivers: bestDay.topDrivers
-            )
-        case .red:
-            let blockers = window
-                .flatMap(\.topDrivers)
-                .compactMap { conciseReason(from: [$0]) }
-                .uniquePrefix(2)
-                .joined(separator: " ")
-            let fallbackBlocker = blockers.isEmpty ? "Wind and sea state remain the main blockers across the period." : blockers
-            return HeroOpportunitySummary(
-                headline: "The next few days look challenging for boating",
-                subheadline: fallbackBlocker,
-                tone: .red,
-                badgeText: "HOLD PLAN",
-                focusDrivers: bestDay.topDrivers
+                badgeText: "GO",
+                focusDrivers: leadDay.topDrivers
             )
         }
+
+        if !careful.isEmpty {
+            let headline: String
+            if usableLabels.count == 1 {
+                headline = "Maybe: \(usableLabels[0])"
+            } else {
+                headline = "Maybe: \(usableLabels.joined(separator: ", "))"
+            }
+            return HeroOpportunitySummary(
+                headline: headline,
+                subheadline: focusReason,
+                tone: .amber,
+                badgeText: "MAYBE",
+                focusDrivers: leadDay.topDrivers
+            )
+        }
+
+        let blockers = window
+            .flatMap(\.topDrivers)
+            .compactMap { conciseReason(from: [$0]) }
+            .uniquePrefix(2)
+            .joined(separator: " ")
+        let fallbackBlocker = blockers.isEmpty ? "Wind and sea state remain the main blockers across the period." : blockers
+        return HeroOpportunitySummary(
+            headline: "Hold off offshore",
+            subheadline: fallbackBlocker,
+            tone: .red,
+            badgeText: "HOLD",
+            focusDrivers: leadDay.topDrivers
+        )
     }
 
     var lastUpdatedText: String {
@@ -270,7 +322,7 @@ final class AppModel: ObservableObject {
             items.append(NextChangeItem(symbol: "clock.arrow.circlepath", title: "Today", detail: first.conditionSummary))
         }
         if let best = fourDayOutlook.first(where: { $0.isBest }) {
-            items.append(NextChangeItem(symbol: "sparkles", title: "Best day in next 4", detail: best.dayLabel == "Today" ? "Today is currently the strongest boating window." : "\(best.dayLabel) currently offers the strongest boating window."))
+            items.append(NextChangeItem(symbol: "sparkles", title: "Cleanest window", detail: best.dayLabel == "Today" ? "Today is currently the cleanest ocean window." : "\(best.dayLabel) is currently the cleanest ocean window."))
         }
         items.append(NextChangeItem(symbol: "wind", title: "Trend watch", detail: "Re-check before departure for updates in wind and warnings."))
         if let tide = extractDriver(keyword: "tide") {
@@ -321,31 +373,39 @@ final class AppModel: ObservableObject {
     }
 
     var fourDayDetailPages: [FourDayDetailPage] {
-        let days = fourDayWindow
-        return days.enumerated().map { index, day in
-            let dayLabel = dayLabel(for: day.dayStart, index: index)
+        let days = forecastDisplayWindow
+        let bestScore = days.compactMap { $0.day.pleasantness }.max()
+        return days.enumerated().map { displayIndex, item in
+            let day = item.day
+            let dayLabel = dayLabel(for: day.dayStart, index: displayIndex)
             let dateText = Self.detailDateFormatter.string(from: day.dayStart)
             let scoreText = day.pleasantness.map { String(format: "%.0f", $0) } ?? "--"
-            let availabilityText = day.availability == .available ? "Available" : "Unavailable"
+            let summaryText = conciseReason(from: day.topDrivers) ?? "Conditions update pending"
             let confidenceText = day.confidence.capitalized
-            let warningText = day.warningLimited ? "Warning constrained" : "No warning constraint"
+            let warningText = day.warningLimited ? "Warning active" : "No warnings"
             let drivers = day.topDrivers.isEmpty ? ["No detailed drivers available yet."] : day.topDrivers
             return FourDayDetailPage(
+                sourceIndex: item.sourceIndex,
                 dayLabel: dayLabel,
                 dateText: dateText,
                 rating: day.rating,
+                scoreValue: day.pleasantness,
                 scoreText: scoreText,
-                availabilityText: availabilityText,
+                summaryText: summaryText,
                 confidenceText: confidenceText,
                 warningText: warningText,
-                topDrivers: Array(drivers.prefix(5))
+                topDrivers: Array(drivers.prefix(5)),
+                isBest: day.pleasantness != nil && day.pleasantness == bestScore
             )
         }
     }
 
     var tideCardViewData: TideCardViewData {
-        let day = selectedDaySummary?.dayStart ?? Calendar.current.startOfDay(for: Date())
-        return buildTideCardViewData(for: day)
+        tidePageViewData.first ?? buildTideCardViewData(pageOffset: 0)
+    }
+
+    var tidePageViewData: [TideCardViewData] {
+        (0 ..< 4).map { buildTideCardViewData(pageOffset: $0) }
     }
 
     var tideNextHighDisplay: String {
@@ -392,13 +452,13 @@ final class AppModel: ObservableObject {
             async let tideTask = tideProvider.fetchTideForecast(
                 location: request.location,
                 start: Date(),
-                days: 4,
+                days: 5,
                 sampleIntervalMinutes: nil
             )
 
             let forecast = try await forecastTask
             output = forecast
-            warningBanner = forecast.warnings.first?.title
+            warningBanner = forecast.daily.prefix(4).contains(where: \.warningLimited) ? forecast.warnings.first?.title : nil
             selectedDayIndex = 0
             errorMessage = forecast.degradedReason
 
@@ -414,11 +474,10 @@ final class AppModel: ObservableObject {
                 }
             } else {
                 if let existing = tideForecast, !existing.days.isEmpty {
-                    tideStatusMessage = "Using cached tide data."
+                    tideStatusMessage = "Using cached official tide data."
                 } else {
-                    let fallback = makeEstimatedTideForecast(start: Date(), days: 4, locationName: request.location.name)
-                    tideForecast = fallback
-                    tideStatusMessage = "Using estimated tide model."
+                    tideForecast = nil
+                    tideStatusMessage = "Official tide data unavailable."
                 }
             }
         } catch {
@@ -430,11 +489,10 @@ final class AppModel: ObservableObject {
             }
             errorMessage = message
             if tideForecast == nil || tideForecast?.days.isEmpty == true {
-                let fallback = makeEstimatedTideForecast(start: Date(), days: 4, locationName: request.location.name)
-                tideForecast = fallback
-                tideStatusMessage = "Using estimated tide model."
+                tideForecast = nil
+                tideStatusMessage = "Official tide data unavailable."
             } else {
-                tideStatusMessage = "Using cached tide data."
+                tideStatusMessage = "Using cached official tide data."
             }
         }
     }
@@ -444,17 +502,29 @@ final class AppModel: ObservableObject {
         selectedDayIndex = dayIndex
     }
 
-    func saveLocationOverride(name: String, latitude: Double, longitude: Double, timeZoneID: String = "Australia/Sydney") {
+    func saveLocationOverride(name: String, latitude: Double, longitude: Double, timeZoneID: String = "Australia/Brisbane") {
         let stored = StoredLocation(name: name, latitude: latitude, longitude: longitude, timeZoneID: timeZoneID)
         savedOverride = stored
         locationStore.save(stored)
-        Task { await refresh() }
+        refreshAfterLocationChange()
+    }
+
+    func saveLocationPreset(_ preset: QueenslandLocationPreset) {
+        savedOverride = preset.storedLocation
+        locationStore.save(preset.storedLocation)
+        refreshAfterLocationChange()
     }
 
     func clearLocationOverride() {
         savedOverride = nil
         locationStore.save(nil)
-        Task { await refresh() }
+        refreshAfterLocationChange()
+    }
+
+    func useCurrentLocation() {
+        pendingCurrentLocationSelection = true
+        locationManager.requestIfNeeded()
+        applyCurrentLocationIfAvailable()
     }
 
     func effectiveLocation() -> MarineLocation {
@@ -465,16 +535,11 @@ final class AppModel: ObservableObject {
     }
 
     func effectiveFeedConfig() -> MarineFeedConfig {
-        if let override = savedOverride {
-            let coord = CLLocationCoordinate2D(latitude: override.latitude, longitude: override.longitude)
-            let nearest = CoastalPreset.nearest(to: coord)
-            var feed = nearest.feed
-            if nearest == .brisbane {
-                feed.preferredCoastalAAC = QLDMarineZone.nearestAAC(to: coord)
-            }
-            return feed
-        }
-        return DefaultLocation.cowleyBeach.feed
+        let location = effectiveLocation()
+        let coord = CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
+        var feed = CoastalPreset.brisbane.feed
+        feed.preferredCoastalAAC = QLDMarineZone.nearestAAC(to: coord)
+        return feed
     }
 
     private func makeRequest() -> MarineForecastRequest {
@@ -483,6 +548,39 @@ final class AppModel: ObservableObject {
             feed: effectiveFeedConfig(),
             forecastDays: 7
         )
+    }
+
+    private func isQueenslandCoordinate(_ coord: CLLocationCoordinate2D) -> Bool {
+        (-29.5 ... -9.0).contains(coord.latitude) && (137.5 ... 154.5).contains(coord.longitude)
+    }
+
+    private func applyCurrentLocationIfAvailable() {
+        guard let coordinate = locationManager.currentCoordinate else { return }
+        guard isQueenslandCoordinate(coordinate) else {
+            pendingCurrentLocationSelection = false
+            errorMessage = "Current location is outside the Queensland coverage area."
+            return
+        }
+        let stored = StoredLocation(
+            name: "Current location",
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            timeZoneID: "Australia/Brisbane"
+        )
+        pendingCurrentLocationSelection = false
+        savedOverride = stored
+        locationStore.save(stored)
+        refreshAfterLocationChange()
+    }
+
+    private func refreshAfterLocationChange() {
+        isLoading = true
+        output = nil
+        tideForecast = nil
+        warningBanner = nil
+        tideStatusMessage = nil
+        selectedDayIndex = 0
+        Task { await refresh() }
     }
 
     private func extractDriver(keyword: String) -> String? {
@@ -566,15 +664,17 @@ final class AppModel: ObservableObject {
         return "\(prefix) \(time)"
     }
 
-    private func buildTideCardViewData(for day: Date) -> TideCardViewData {
+    private func buildTideCardViewData(pageOffset: Int) -> TideCardViewData {
         let calendar = Calendar.current
         let now = Date()
-        let axisStart = now
-        let axisEnd = calendar.date(byAdding: .hour, value: 24, to: now) ?? now
+        let axisStart = calendar.date(byAdding: .hour, value: pageOffset * 24, to: now) ?? now
+        let axisEnd = calendar.date(byAdding: .hour, value: 24, to: axisStart) ?? axisStart
+        let eventLookback = calendar.date(byAdding: .hour, value: -6, to: axisStart) ?? axisStart
+        let eventLookahead = calendar.date(byAdding: .hour, value: 6, to: axisEnd) ?? axisEnd
 
         let authoritativeEvents = (tideForecast?.days ?? [])
             .flatMap(\.events)
-            .filter { $0.time >= calendar.date(byAdding: .hour, value: -6, to: axisStart) ?? axisStart && $0.time <= axisEnd }
+            .filter { $0.time >= eventLookback && $0.time <= eventLookahead }
             .sorted { $0.time < $1.time }
 
         let providerSamples = (tideForecast?.days ?? [])
@@ -582,8 +682,7 @@ final class AppModel: ObservableObject {
             .filter { $0.time >= axisStart && $0.time <= axisEnd }
             .sorted { $0.time < $1.time }
 
-        let fallbackEvents = syntheticTideEvents(for: day, anchor: now)
-        let chosenEvents = authoritativeEvents.isEmpty ? fallbackEvents : authoritativeEvents.map {
+        let chosenEvents = authoritativeEvents.map {
             TideEventViewPoint(
                 time: $0.time,
                 kind: $0.kind == .high ? .high : .low,
@@ -603,8 +702,8 @@ final class AppModel: ObservableObject {
                 )
             }
             series = .sampled(points)
-            note = "Provider-backed tide samples · next 24h"
-        } else {
+            note = "Official tide samples · 24h window"
+        } else if !chosenEvents.isEmpty {
             let interpolationInput = chosenEvents.map {
                 TideEventPoint(
                     time: $0.time,
@@ -617,13 +716,19 @@ final class AppModel: ObservableObject {
                 TideSamplePoint(time: $0.time, heightMeters: $0.heightMeters, isDerived: true)
             }
             series = points.isEmpty ? .unavailable : .eventInterpolated(points)
-            note = authoritativeEvents.isEmpty ? "Estimated fallback tide model · next 24h" : "Estimated between tide extrema · next 24h"
+            note = "Interpolated from official tide extrema · 24h window"
+        } else {
+            series = .unavailable
+            note = "Official tide data unavailable."
         }
 
-        let nextHigh = chosenEvents.first(where: { $0.kind == .high && $0.time >= now }) ?? chosenEvents.first(where: { $0.kind == .high })
-        let nextLow = chosenEvents.first(where: { $0.kind == .low && $0.time >= now }) ?? chosenEvents.first(where: { $0.kind == .low })
-        let stateLabel = tideStateLabel(now: now, events: chosenEvents)
+        let nextHigh = chosenEvents.first(where: { $0.kind == .high && $0.time >= axisStart && $0.time <= axisEnd }) ?? chosenEvents.first(where: { $0.kind == .high && $0.time >= axisStart })
+        let nextLow = chosenEvents.first(where: { $0.kind == .low && $0.time >= axisStart && $0.time <= axisEnd }) ?? chosenEvents.first(where: { $0.kind == .low && $0.time >= axisStart })
+        let stateLabel = chosenEvents.isEmpty ? "Official tide data unavailable" : tideStateLabel(now: pageOffset == 0 ? now : axisStart, events: chosenEvents)
         return TideCardViewData(
+            id: axisStart,
+            dayLabel: tidePageLabel(for: axisStart, offset: pageOffset),
+            windowLabel: tideWindowLabel(from: axisStart, to: axisEnd, offset: pageOffset),
             stateLabel: stateLabel,
             nextHigh: nextHigh,
             nextLow: nextLow,
@@ -635,46 +740,16 @@ final class AppModel: ObservableObject {
         )
     }
 
-    private func syntheticTideEvents(for day: Date, anchor: Date) -> [TideEventViewPoint] {
-        let calendar = Calendar.current
-        let dayStart = calendar.startOfDay(for: day)
-        let baseHeights = selectedDaySummary?.rating == .red ? (0.5, 1.9) : (0.7, 2.2)
-        let offsets = [-9, -3, 3, 9, 15, 21, 27, 33]
-        return offsets.enumerated().compactMap { idx, hour in
-            guard let t = calendar.date(byAdding: .hour, value: hour, to: dayStart),
-                  let m = calendar.date(byAdding: .minute, value: idx.isMultiple(of: 2) ? 20 : 45, to: t) else { return nil }
-            let kind: TideEventKindView = idx.isMultiple(of: 2) ? .low : .high
-            let h = kind == .low ? baseHeights.0 : baseHeights.1
-            return TideEventViewPoint(time: m, kind: kind, heightMeters: h, isDerivedHeight: true)
-        }
-        .filter { $0.time >= calendar.date(byAdding: .hour, value: -6, to: anchor) ?? anchor }
-        .sorted { $0.time < $1.time }
+    private func tidePageLabel(for date: Date, offset: Int) -> String {
+        if offset == 0 { return "Now" }
+        if offset == 1 { return "+24h" }
+        if offset == 2 { return "+48h" }
+        return "+72h"
     }
 
-    private func interpolateSeriesFromEvents(_ events: [TideEventViewPoint], stepMinutes: Int) -> [TideSamplePoint] {
-        guard events.count >= 2 else { return [] }
-        var out: [TideSamplePoint] = []
-        for pair in zip(events, events.dropFirst()) {
-            let e0 = pair.0
-            let e1 = pair.1
-            guard let h0 = e0.heightMeters, let h1 = e1.heightMeters else { continue }
-            let t0 = e0.time.timeIntervalSinceReferenceDate
-            let t1 = e1.time.timeIntervalSinceReferenceDate
-            guard t1 > t0 else { continue }
-            let step = Double(stepMinutes * 60)
-            var t = t0
-            while t < t1 {
-                let phase = max(0, min(1, (t - t0) / (t1 - t0)))
-                let eased = 0.5 - 0.5 * cos(.pi * phase)
-                let height = h0 + (h1 - h0) * eased
-                out.append(TideSamplePoint(time: Date(timeIntervalSinceReferenceDate: t), heightMeters: height, isDerived: true))
-                t += step
-            }
-        }
-        if let last = events.last, let h = last.heightMeters {
-            out.append(TideSamplePoint(time: last.time, heightMeters: h, isDerived: true))
-        }
-        return out
+    private func tideWindowLabel(from start: Date, to end: Date, offset: Int) -> String {
+        if offset == 0 { return "Next 24h" }
+        return "\(Self.shortDayFormatter.string(from: start)) \(Self.timeFormatter.string(from: start)) to \(Self.timeFormatter.string(from: end))"
     }
 
     private func tideStateLabel(now: Date, events: [TideEventViewPoint]) -> String {
@@ -709,6 +784,12 @@ final class AppModel: ObservableObject {
         return f
     }()
 
+    private static let shortDayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE"
+        return f
+    }()
+
     private static let detailDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "EEEE, d MMM"
@@ -717,36 +798,11 @@ final class AppModel: ObservableObject {
 
     // Placeholder for upstream-generated summary integration.
     private var llmDecisionSummary: String? { nil }
-
-    private func makeEstimatedTideForecast(start: Date, days: Int, locationName: String) -> TideForecast {
-        let calendar = Calendar.current
-        let safeDays = max(1, days)
-        var dayForecasts: [TideDayForecast] = []
-        for offset in 0 ..< safeDays {
-            guard let day = calendar.date(byAdding: .day, value: offset, to: calendar.startOfDay(for: start)) else { continue }
-            let events = syntheticTideEvents(for: day, anchor: start).map {
-                TideEventPoint(
-                    time: $0.time,
-                    kind: $0.kind == .high ? .high : .low,
-                    heightMeters: $0.heightMeters,
-                    source: .derived
-                )
-            }
-            let samples = TideInterpolation.buildDerivedSamples(from: events, stepMinutes: 20)
-            dayForecasts.append(TideDayForecast(dayStart: day, events: events, samples: samples))
-        }
-        return TideForecast(
-            generatedAt: Date(),
-            provider: "estimated",
-            locationName: locationName,
-            days: dayForecasts
-        )
-    }
 }
 
 private struct TideStore {
     private let defaults: UserDefaults
-    private let key = "cached_tide_forecast_v2"
+    private let key = "cached_tide_forecast_v3"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -754,7 +810,8 @@ private struct TideStore {
 
     func load() -> TideForecast? {
         guard let data = defaults.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(TideForecast.self, from: data)
+        guard let forecast = try? JSONDecoder().decode(TideForecast.self, from: data) else { return nil }
+        return forecast.provider == "estimated" ? nil : forecast
     }
 
     func save(_ forecast: TideForecast?) {
@@ -908,94 +965,5 @@ private extension Array where Element == String {
             if out.count >= count { break }
         }
         return out
-    }
-}
-
-// MARK: - Inline support types
-// Kept in this file so app builds even if project sources list is stale.
-
-struct StoredLocation: Codable, Equatable {
-    var name: String
-    var latitude: Double
-    var longitude: Double
-    var timeZoneID: String
-
-    var marineLocation: MarineLocation {
-        MarineLocation(name: name, latitude: latitude, longitude: longitude, timeZoneID: timeZoneID)
-    }
-}
-
-struct LocationStore {
-    private let defaults: UserDefaults
-    private let key = "saved_location_override_v1"
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-    }
-
-    func load() -> StoredLocation? {
-        guard let data = defaults.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(StoredLocation.self, from: data)
-    }
-
-    func save(_ location: StoredLocation?) {
-        guard let location else {
-            defaults.removeObject(forKey: key)
-            return
-        }
-        let data = try? JSONEncoder().encode(location)
-        defaults.set(data, forKey: key)
-    }
-}
-
-@MainActor
-final class LocationManager: NSObject, ObservableObject {
-    @Published private(set) var authorizationStatus: CLAuthorizationStatus
-    @Published private(set) var currentCoordinate: CLLocationCoordinate2D?
-    var onCoordinateUpdate: ((CLLocationCoordinate2D) -> Void)?
-
-    private let manager = CLLocationManager()
-
-    override init() {
-        authorizationStatus = manager.authorizationStatus
-        super.init()
-        manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyKilometer
-    }
-
-    func requestIfNeeded() {
-        switch authorizationStatus {
-        case .notDetermined:
-            manager.requestWhenInUseAuthorization()
-        case .authorizedAlways, .authorizedWhenInUse:
-            manager.requestLocation()
-        default:
-            break
-        }
-    }
-
-    func refreshLocation() {
-        guard authorizationStatus == .authorizedAlways || authorizationStatus == .authorizedWhenInUse else { return }
-        manager.requestLocation()
-    }
-}
-
-@MainActor extension LocationManager: CLLocationManagerDelegate {
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authorizationStatus = manager.authorizationStatus
-        if authorizationStatus == .authorizedAlways || authorizationStatus == .authorizedWhenInUse {
-            manager.requestLocation()
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        currentCoordinate = locations.last?.coordinate
-        if let coordinate = currentCoordinate {
-            onCoordinateUpdate?(coordinate)
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
-        _ = error
     }
 }

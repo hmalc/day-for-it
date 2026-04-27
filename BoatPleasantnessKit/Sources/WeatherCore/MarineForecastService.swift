@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MarineForecastService {
+public struct MarineForecastService: Sendable {
     private let providers: ProviderFacade
     private let assembler: MarineSnapshotAssembler
 

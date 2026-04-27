@@ -7,7 +7,7 @@ public enum QueenslandTideProviderError: Error {
     case malformedCSV
 }
 
-public struct QueenslandTideDataProvider: TideDataProvider {
+public struct QueenslandTideDataProvider: TideDataProvider, Sendable {
     private let session: URLSession
     private let calendar: Calendar
 

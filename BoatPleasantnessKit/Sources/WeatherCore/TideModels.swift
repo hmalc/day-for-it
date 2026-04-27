@@ -94,7 +94,7 @@ public enum TideDataProviderError: Error {
     case unavailable
 }
 
-public protocol TideDataProvider {
+public protocol TideDataProvider: Sendable {
     func fetchTideForecast(
         location: MarineLocation,
         start: Date,
