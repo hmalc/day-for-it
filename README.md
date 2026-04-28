@@ -1,9 +1,9 @@
-# BoatPleasantness iOS Infrastructure
+# Day For It iOS Infrastructure
 
 This repository is split into:
 
-- `BoatPleasantnessKit/`: Swift Package containing domain logic (`PleasantnessEngine`, `WeatherCore`).
-- `BoatPleasantnessApp/`: SwiftUI iOS app target source, resources, and tests.
+- `dayforitKit/`: Swift Package containing domain logic (`PleasantnessEngine`, `WeatherCore`).
+- `dayforitApp/`: SwiftUI iOS app target source, resources, and tests.
 - `project.yml`: XcodeGen manifest for generating the `.xcodeproj`.
 
 ## Generate the Xcode project
@@ -15,7 +15,7 @@ This repository is split into:
 xcodegen generate
 ```
 
-3. Open `BoatPleasantness.xcodeproj` in Xcode.
+3. Open `dayforit.xcodeproj` in Xcode.
 
 ## Notes
 

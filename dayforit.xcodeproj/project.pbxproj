@@ -1,0 +1,527 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		12000590D14067364A44B35A /* PleasantnessEngine in Frameworks */ = {isa = PBXBuildFile; productRef = AE74A6C69DC2F274A403D3E0 /* PleasantnessEngine */; };
+		30C25EE65FFB7E5D6A863A47 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD76938961AEB69054BF664F /* LocationManager.swift */; };
+		3B614BB644381C617869AA20 /* KeyDriversGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E91516E0F0741B1E2F10923 /* KeyDriversGrid.swift */; };
+		3CA944CFA868525B2158376B /* BoatingUITheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F397990E1AD73871AE3A171F /* BoatingUITheme.swift */; };
+		46300ABE7678728D73E5690E /* LocationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C424F9045B2B6F218CF12F76 /* LocationStore.swift */; };
+		51F0701B15DE88B561655A3E /* HeroRecommendationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7004D9DE657608FAF05136A4 /* HeroRecommendationCard.swift */; };
+		60C1C4686036D54541DFF732 /* dayforitApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D75E23B41B9C44E30AAC1EF1 /* dayforitApp.swift */; };
+		6A063A1C66771C2A3400A622 /* DetailedConditionsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDC6A13C7A52701D7199A33 /* DetailedConditionsCard.swift */; };
+		6B86C662B2923ECE8119AA84 /* WarningBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CAA2EA900F668888CCABF45 /* WarningBannerView.swift */; };
+		7CC1384ACD926D61FDEDE604 /* TideCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B766B861693E68CDEC122E /* TideCard.swift */; };
+		91C4F90260CC23F8B05F371D /* NextChangesCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E593C8A718F6CE56CBE6546F /* NextChangesCard.swift */; };
+		9CFD9CF591E8EDAA2CAD9DB8 /* dayforitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBB3823B9310A0A83C1869B5 /* dayforitTests.swift */; };
+		A352F442A0CEB3B74FE89C55 /* WeatherCore in Frameworks */ = {isa = PBXBuildFile; productRef = F86F81D7A2650D900376E37E /* WeatherCore */; };
+		A5D6F0DD7AA17703862FC808 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B191410419141AE61BAE4246 /* HomeView.swift */; };
+		A636834396162491DB35E956 /* SourceAndUpdateInfoCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B31B07163D862203D3DBF6E /* SourceAndUpdateInfoCard.swift */; };
+		B4B238C1C13F4172EA3E8141 /* DriverListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AE4FFA207650D735EAF7341 /* DriverListView.swift */; };
+		D82712EB0A2D53D0225488D3 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE3FBC49FF64F2C8998E3F /* ContentView.swift */; };
+		DC3FED6D09E53CA6C455ECB2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24172E83314B9697F34DF238 /* SettingsView.swift */; };
+		F0313C90F0BF6A39B81EC872 /* DayScoreStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501C2BEA7314320D3290BA44 /* DayScoreStripView.swift */; };
+		FAD8F4F6CD34A2563EEC2A92 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC166E0E6F3A21E90947738 /* AppModel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		ABE5692F5CEB6BB40D992B57 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4B5A1C2E4AA2FF7759A43108 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BCD9D49F2F52FE263DB9D8BC;
+			remoteInfo = dayforit;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		01456C276B17F3200AEFE211 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		05A1F1E927549DB38C6FAB18 /* dayforitKit */ = {isa = PBXFileReference; lastKnownFileType = folder; path = dayforitKit; sourceTree = SOURCE_ROOT; };
+		0CDC6A13C7A52701D7199A33 /* DetailedConditionsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailedConditionsCard.swift; sourceTree = "<group>"; };
+		1E91516E0F0741B1E2F10923 /* KeyDriversGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyDriversGrid.swift; sourceTree = "<group>"; };
+		24172E83314B9697F34DF238 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		31D5B2F79CD2ECB1CE41DC33 /* dayforitTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = dayforitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		34CE3FBC49FF64F2C8998E3F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		3B31B07163D862203D3DBF6E /* SourceAndUpdateInfoCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceAndUpdateInfoCard.swift; sourceTree = "<group>"; };
+		501C2BEA7314320D3290BA44 /* DayScoreStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayScoreStripView.swift; sourceTree = "<group>"; };
+		5AE4FFA207650D735EAF7341 /* DriverListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverListView.swift; sourceTree = "<group>"; };
+		5CAA2EA900F668888CCABF45 /* WarningBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WarningBannerView.swift; sourceTree = "<group>"; };
+		7004D9DE657608FAF05136A4 /* HeroRecommendationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroRecommendationCard.swift; sourceTree = "<group>"; };
+		7F25691B130E0398DD05C7C9 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		8AC166E0E6F3A21E90947738 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		B191410419141AE61BAE4246 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		C424F9045B2B6F218CF12F76 /* LocationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationStore.swift; sourceTree = "<group>"; };
+		CA4303C92A2A91A89C8C37D7 /* dayforit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = dayforit.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBB3823B9310A0A83C1869B5 /* dayforitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dayforitTests.swift; sourceTree = "<group>"; };
+		CD76938961AEB69054BF664F /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		D75E23B41B9C44E30AAC1EF1 /* dayforitApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dayforitApp.swift; sourceTree = "<group>"; };
+		E593C8A718F6CE56CBE6546F /* NextChangesCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextChangesCard.swift; sourceTree = "<group>"; };
+		E8B766B861693E68CDEC122E /* TideCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TideCard.swift; sourceTree = "<group>"; };
+		F397990E1AD73871AE3A171F /* BoatingUITheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoatingUITheme.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0CB790F5FE7F35F55A5E746F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				12000590D14067364A44B35A /* PleasantnessEngine in Frameworks */,
+				A352F442A0CEB3B74FE89C55 /* WeatherCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0864B1092C4FDBBEA7EF2057 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CA4303C92A2A91A89C8C37D7 /* dayforit.app */,
+				31D5B2F79CD2ECB1CE41DC33 /* dayforitTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		13FBE4FAFF70B60536478BA9 = {
+			isa = PBXGroup;
+			children = (
+				CDAC83508FEEB7B81F1F5499 /* Config */,
+				C5A78EB7DFA675950BED4248 /* Packages */,
+				C05278F943A30C0C2F0FA8B3 /* Sources */,
+				F2C69E423D3249CB9E62653B /* Tests */,
+				0864B1092C4FDBBEA7EF2057 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C05278F943A30C0C2F0FA8B3 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				8AC166E0E6F3A21E90947738 /* AppModel.swift */,
+				F397990E1AD73871AE3A171F /* BoatingUITheme.swift */,
+				34CE3FBC49FF64F2C8998E3F /* ContentView.swift */,
+				D75E23B41B9C44E30AAC1EF1 /* dayforitApp.swift */,
+				501C2BEA7314320D3290BA44 /* DayScoreStripView.swift */,
+				0CDC6A13C7A52701D7199A33 /* DetailedConditionsCard.swift */,
+				5AE4FFA207650D735EAF7341 /* DriverListView.swift */,
+				7004D9DE657608FAF05136A4 /* HeroRecommendationCard.swift */,
+				B191410419141AE61BAE4246 /* HomeView.swift */,
+				1E91516E0F0741B1E2F10923 /* KeyDriversGrid.swift */,
+				CD76938961AEB69054BF664F /* LocationManager.swift */,
+				C424F9045B2B6F218CF12F76 /* LocationStore.swift */,
+				E593C8A718F6CE56CBE6546F /* NextChangesCard.swift */,
+				24172E83314B9697F34DF238 /* SettingsView.swift */,
+				3B31B07163D862203D3DBF6E /* SourceAndUpdateInfoCard.swift */,
+				E8B766B861693E68CDEC122E /* TideCard.swift */,
+				5CAA2EA900F668888CCABF45 /* WarningBannerView.swift */,
+			);
+			name = Sources;
+			path = dayforitApp/Sources;
+			sourceTree = "<group>";
+		};
+		C5A78EB7DFA675950BED4248 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				05A1F1E927549DB38C6FAB18 /* dayforitKit */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		CDAC83508FEEB7B81F1F5499 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				7F25691B130E0398DD05C7C9 /* Debug.xcconfig */,
+				01456C276B17F3200AEFE211 /* Release.xcconfig */,
+			);
+			name = Config;
+			path = dayforitApp/Config;
+			sourceTree = "<group>";
+		};
+		F2C69E423D3249CB9E62653B /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				CBB3823B9310A0A83C1869B5 /* dayforitTests.swift */,
+			);
+			name = Tests;
+			path = dayforitApp/Tests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4ED925FB5FB13A786F2B0908 /* dayforitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E43448E3122458558943B1D8 /* Build configuration list for PBXNativeTarget "dayforitTests" */;
+			buildPhases = (
+				DB39E191CC03ED05D357D6E8 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				43830EF8E21FC3BBDA9D30AD /* PBXTargetDependency */,
+			);
+			name = dayforitTests;
+			packageProductDependencies = (
+			);
+			productName = dayforitTests;
+			productReference = 31D5B2F79CD2ECB1CE41DC33 /* dayforitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		BCD9D49F2F52FE263DB9D8BC /* dayforit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C5795D5FB1B97C00BDF68B17 /* Build configuration list for PBXNativeTarget "dayforit" */;
+			buildPhases = (
+				A93B36E7F33E83E2D58DE151 /* Sources */,
+				0CB790F5FE7F35F55A5E746F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = dayforit;
+			packageProductDependencies = (
+				AE74A6C69DC2F274A403D3E0 /* PleasantnessEngine */,
+				F86F81D7A2650D900376E37E /* WeatherCore */,
+			);
+			productName = dayforit;
+			productReference = CA4303C92A2A91A89C8C37D7 /* dayforit.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4B5A1C2E4AA2FF7759A43108 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					BCD9D49F2F52FE263DB9D8BC = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 5AA4D366B339456684B2B2E6 /* Build configuration list for PBXProject "dayforit" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 13FBE4FAFF70B60536478BA9;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EC3C1657F917D5D306266C9A /* XCLocalSwiftPackageReference "dayforitKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0864B1092C4FDBBEA7EF2057 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BCD9D49F2F52FE263DB9D8BC /* dayforit */,
+				4ED925FB5FB13A786F2B0908 /* dayforitTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A93B36E7F33E83E2D58DE151 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FAD8F4F6CD34A2563EEC2A92 /* AppModel.swift in Sources */,
+				3CA944CFA868525B2158376B /* BoatingUITheme.swift in Sources */,
+				D82712EB0A2D53D0225488D3 /* ContentView.swift in Sources */,
+				F0313C90F0BF6A39B81EC872 /* DayScoreStripView.swift in Sources */,
+				6A063A1C66771C2A3400A622 /* DetailedConditionsCard.swift in Sources */,
+				B4B238C1C13F4172EA3E8141 /* DriverListView.swift in Sources */,
+				51F0701B15DE88B561655A3E /* HeroRecommendationCard.swift in Sources */,
+				A5D6F0DD7AA17703862FC808 /* HomeView.swift in Sources */,
+				3B614BB644381C617869AA20 /* KeyDriversGrid.swift in Sources */,
+				30C25EE65FFB7E5D6A863A47 /* LocationManager.swift in Sources */,
+				46300ABE7678728D73E5690E /* LocationStore.swift in Sources */,
+				91C4F90260CC23F8B05F371D /* NextChangesCard.swift in Sources */,
+				DC3FED6D09E53CA6C455ECB2 /* SettingsView.swift in Sources */,
+				A636834396162491DB35E956 /* SourceAndUpdateInfoCard.swift in Sources */,
+				7CC1384ACD926D61FDEDE604 /* TideCard.swift in Sources */,
+				6B86C662B2923ECE8119AA84 /* WarningBannerView.swift in Sources */,
+				60C1C4686036D54541DFF732 /* dayforitApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DB39E191CC03ED05D357D6E8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9CFD9CF591E8EDAA2CAD9DB8 /* dayforitTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		43830EF8E21FC3BBDA9D30AD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BCD9D49F2F52FE263DB9D8BC /* dayforit */;
+			targetProxy = ABE5692F5CEB6BB40D992B57 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		013210505B9F6B36ADC7BC2F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hmalc.dayforit.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/dayforit.app/dayforit";
+			};
+			name = Release;
+		};
+		1C9FD07317BCD1DA7E5600FC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		99C4E39E43FC3F5BBBEF3932 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A53615EFB0CBC99B4A0D42A5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 01456C276B17F3200AEFE211 /* Release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HD8CHB2HER;
+				INFOPLIST_FILE = dayforitApp/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hmalc.dayforit;
+				PRODUCT_NAME = dayforit;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.1;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		E5521E515729C01146003C88 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7F25691B130E0398DD05C7C9 /* Debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HD8CHB2HER;
+				INFOPLIST_FILE = dayforitApp/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hmalc.dayforit;
+				PRODUCT_NAME = dayforit;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.1;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		FA6CE4DDC368BD7474D4F73C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hmalc.dayforit.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/dayforit.app/dayforit";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5AA4D366B339456684B2B2E6 /* Build configuration list for PBXProject "dayforit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				99C4E39E43FC3F5BBBEF3932 /* Debug */,
+				1C9FD07317BCD1DA7E5600FC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C5795D5FB1B97C00BDF68B17 /* Build configuration list for PBXNativeTarget "dayforit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5521E515729C01146003C88 /* Debug */,
+				A53615EFB0CBC99B4A0D42A5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E43448E3122458558943B1D8 /* Build configuration list for PBXNativeTarget "dayforitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FA6CE4DDC368BD7474D4F73C /* Debug */,
+				013210505B9F6B36ADC7BC2F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		EC3C1657F917D5D306266C9A /* XCLocalSwiftPackageReference "dayforitKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = dayforitKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AE74A6C69DC2F274A403D3E0 /* PleasantnessEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PleasantnessEngine;
+		};
+		F86F81D7A2650D900376E37E /* WeatherCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WeatherCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 4B5A1C2E4AA2FF7759A43108 /* Project object */;
+}
