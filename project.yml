@@ -15,8 +15,10 @@ targets:
     platform: iOS
     sources:
       - path: dayforitApp/Sources
-    resources:
-      - path: dayforitApp/Resources
+      - path: dayforitApp/Resources/Assets.xcassets
+        buildPhase: resources
+      - path: dayforitApp/Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
     configFiles:
       Debug: dayforitApp/Config/Debug.xcconfig
       Release: dayforitApp/Config/Release.xcconfig
@@ -32,6 +34,7 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: HD8CHB2HER
     dependencies:
       - package: dayforitKit
         product: PleasantnessEngine

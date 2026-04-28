@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		12000590D14067364A44B35A /* PleasantnessEngine in Frameworks */ = {isa = PBXBuildFile; productRef = AE74A6C69DC2F274A403D3E0 /* PleasantnessEngine */; };
+		1B33136642B7DADD6F1EFA55 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C579CEAF83C19D667245BDA9 /* PrivacyInfo.xcprivacy */; };
 		30C25EE65FFB7E5D6A863A47 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD76938961AEB69054BF664F /* LocationManager.swift */; };
 		3B614BB644381C617869AA20 /* KeyDriversGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E91516E0F0741B1E2F10923 /* KeyDriversGrid.swift */; };
 		3CA944CFA868525B2158376B /* BoatingUITheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F397990E1AD73871AE3A171F /* BoatingUITheme.swift */; };
@@ -23,6 +24,7 @@
 		A5D6F0DD7AA17703862FC808 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B191410419141AE61BAE4246 /* HomeView.swift */; };
 		A636834396162491DB35E956 /* SourceAndUpdateInfoCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B31B07163D862203D3DBF6E /* SourceAndUpdateInfoCard.swift */; };
 		B4B238C1C13F4172EA3E8141 /* DriverListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AE4FFA207650D735EAF7341 /* DriverListView.swift */; };
+		B62BC4E6D12CA08BF7F8C773 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FCF7E96C023646444E9BC7F8 /* Assets.xcassets */; };
 		D82712EB0A2D53D0225488D3 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE3FBC49FF64F2C8998E3F /* ContentView.swift */; };
 		DC3FED6D09E53CA6C455ECB2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24172E83314B9697F34DF238 /* SettingsView.swift */; };
 		F0313C90F0BF6A39B81EC872 /* DayScoreStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501C2BEA7314320D3290BA44 /* DayScoreStripView.swift */; };
@@ -41,7 +43,7 @@
 
 /* Begin PBXFileReference section */
 		01456C276B17F3200AEFE211 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
-		05A1F1E927549DB38C6FAB18 /* dayforitKit */ = {isa = PBXFileReference; lastKnownFileType = folder; path = dayforitKit; sourceTree = SOURCE_ROOT; };
+		05A1F1E927549DB38C6FAB18 /* dayforitKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = dayforitKit; path = dayforitKit; sourceTree = SOURCE_ROOT; };
 		0CDC6A13C7A52701D7199A33 /* DetailedConditionsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailedConditionsCard.swift; sourceTree = "<group>"; };
 		1E91516E0F0741B1E2F10923 /* KeyDriversGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyDriversGrid.swift; sourceTree = "<group>"; };
 		24172E83314B9697F34DF238 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -56,13 +58,15 @@
 		8AC166E0E6F3A21E90947738 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		B191410419141AE61BAE4246 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		C424F9045B2B6F218CF12F76 /* LocationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationStore.swift; sourceTree = "<group>"; };
-		CA4303C92A2A91A89C8C37D7 /* dayforit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = dayforit.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C579CEAF83C19D667245BDA9 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		CA4303C92A2A91A89C8C37D7 /* dayforit.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = dayforit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBB3823B9310A0A83C1869B5 /* dayforitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dayforitTests.swift; sourceTree = "<group>"; };
 		CD76938961AEB69054BF664F /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		D75E23B41B9C44E30AAC1EF1 /* dayforitApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dayforitApp.swift; sourceTree = "<group>"; };
 		E593C8A718F6CE56CBE6546F /* NextChangesCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextChangesCard.swift; sourceTree = "<group>"; };
 		E8B766B861693E68CDEC122E /* TideCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TideCard.swift; sourceTree = "<group>"; };
 		F397990E1AD73871AE3A171F /* BoatingUITheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoatingUITheme.swift; sourceTree = "<group>"; };
+		FCF7E96C023646444E9BC7F8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,10 +96,21 @@
 			children = (
 				CDAC83508FEEB7B81F1F5499 /* Config */,
 				C5A78EB7DFA675950BED4248 /* Packages */,
+				5FEADA277429B1323BCAEC13 /* Resources */,
 				C05278F943A30C0C2F0FA8B3 /* Sources */,
 				F2C69E423D3249CB9E62653B /* Tests */,
 				0864B1092C4FDBBEA7EF2057 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		5FEADA277429B1323BCAEC13 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				FCF7E96C023646444E9BC7F8 /* Assets.xcassets */,
+				C579CEAF83C19D667245BDA9 /* PrivacyInfo.xcprivacy */,
+			);
+			name = Resources;
+			path = dayforitApp/Resources;
 			sourceTree = "<group>";
 		};
 		C05278F943A30C0C2F0FA8B3 /* Sources */ = {
@@ -176,6 +191,7 @@
 			buildConfigurationList = C5795D5FB1B97C00BDF68B17 /* Build configuration list for PBXNativeTarget "dayforit" */;
 			buildPhases = (
 				A93B36E7F33E83E2D58DE151 /* Sources */,
+				B198E098FA4EC650187449E7 /* Resources */,
 				0CB790F5FE7F35F55A5E746F /* Frameworks */,
 			);
 			buildRules = (
@@ -201,6 +217,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					BCD9D49F2F52FE263DB9D8BC = {
+						DevelopmentTeam = HD8CHB2HER;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -227,6 +244,18 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B198E098FA4EC650187449E7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B62BC4E6D12CA08BF7F8C773 /* Assets.xcassets in Resources */,
+				1B33136642B7DADD6F1EFA55 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A93B36E7F33E83E2D58DE151 /* Sources */ = {
