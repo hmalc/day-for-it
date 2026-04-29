@@ -60,14 +60,14 @@ struct HeroRecommendationCard: View {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.caption)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(DayForItPalette.hold)
                         Text(warningText)
                             .font(.footnote)
                             .lineLimit(2)
                             .foregroundStyle(.primary)
                     }
                     .padding(10)
-                    .background(Color.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(DayForItPalette.caution.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
             .padding(BoatingUITheme.heroPadding)
@@ -120,6 +120,7 @@ struct HeroFluidBackground: View {
             LinearGradient(
                 colors: [
                     Color(uiColor: .secondarySystemGroupedBackground),
+                    DayForItPalette.sky.opacity(0.12),
                     Color(uiColor: .tertiarySystemGroupedBackground),
                 ],
                 startPoint: .topLeading,

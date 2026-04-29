@@ -25,7 +25,7 @@ struct DayScoreStripView: View {
                         }
                         .padding(.vertical, 8)
                         .padding(.horizontal, 10)
-                        .background(idx == selectedIndex ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.08))
+                        .background(idx == selectedIndex ? DayForItPalette.sky.opacity(0.22) : DayForItPalette.sky.opacity(0.10))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
@@ -43,9 +43,9 @@ struct DayScoreStripView: View {
 
     private func colorForScore(_ score: Double?) -> Color {
         guard let score else { return .secondary.opacity(0.5) }
-        if score >= 75 { return .green }
-        if score >= 55 { return .yellow }
-        if score >= 35 { return .orange }
-        return .red
+        if score >= 75 { return DayForItPalette.calm }
+        if score >= 55 { return DayForItPalette.okay }
+        if score >= 35 { return DayForItPalette.caution }
+        return DayForItPalette.hold
     }
 }

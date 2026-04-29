@@ -126,6 +126,9 @@ struct SettingsView: View {
                     Link("Support and feedback", destination: Self.supportURL)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(DayForItPalette.pageBackground.ignoresSafeArea())
+            .tint(DayForItPalette.oceanDeep)
             .navigationTitle("Settings")
             .onAppear {
                 presetPickerIsReady = false

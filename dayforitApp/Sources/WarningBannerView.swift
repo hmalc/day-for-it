@@ -6,12 +6,12 @@ struct WarningBannerView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(DayForItPalette.hold)
             Text(text)
                 .font(.footnote.weight(.semibold))
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+        .background(DayForItPalette.caution.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
     }
 }

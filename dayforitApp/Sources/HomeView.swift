@@ -51,7 +51,8 @@ struct HomeView: View {
                 .padding(.horizontal, BoatingUITheme.horizontalPadding)
                 .padding(.top, BoatingUITheme.topSpacing)
             }
-            .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
+            .background(DayForItPalette.pageBackground.ignoresSafeArea())
+            .tint(DayForItPalette.oceanDeep)
             .navigationTitle(model.output?.location.name ?? "Day For It")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {

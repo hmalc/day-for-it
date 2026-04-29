@@ -56,7 +56,7 @@ struct TideCurveView: View {
                         control2: CGPoint(x: w * 0.75, y: h * 0.92)
                     )
                 }
-                .stroke(Color.cyan.opacity(0.5), style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
+                .stroke(DayForItPalette.oceanDeep.opacity(0.5), style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
 
                 Path { path in
                     path.move(to: CGPoint(x: 0, y: midY))
@@ -69,13 +69,13 @@ struct TideCurveView: View {
                     path.addLine(to: CGPoint(x: 0, y: h))
                     path.closeSubpath()
                 }
-                .fill(Color.cyan.opacity(0.12))
+                .fill(DayForItPalette.ocean.opacity(0.12))
 
                 Circle()
-                    .fill(Color.cyan.opacity(0.85))
+                    .fill(DayForItPalette.oceanDeep.opacity(0.85))
                     .frame(width: pulse ? 11 : 8, height: pulse ? 11 : 8)
                     .position(x: w * 0.62, y: midY)
-                    .shadow(color: Color.cyan.opacity(0.35), radius: pulse ? 8 : 3)
+                    .shadow(color: DayForItPalette.oceanDeep.opacity(0.35), radius: pulse ? 8 : 3)
             }
         }
     }

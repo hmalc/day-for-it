@@ -315,9 +315,9 @@ final class AppModel: ObservableObject {
     var keyDriverMetrics: [DriverMetric] {
         [
             DriverMetric(symbol: "wind", label: "Wind", value: heroWindText, detail: "Primary comfort and handling factor", accent: nil),
-            DriverMetric(symbol: "water.waves", label: "Waves", value: heroWavesText, detail: "Sea state impact on ride quality", accent: Color.cyan.opacity(0.7)),
-            DriverMetric(symbol: "arrow.up.and.down", label: "Tide", value: heroTideText, detail: "Windowing support for launch/return", accent: Color.teal.opacity(0.7)),
-            DriverMetric(symbol: "exclamationmark.triangle.fill", label: "Warnings", value: warningBanner == nil ? "None" : "Active", detail: warningBanner == nil ? "No active marine warnings" : "Watch timing and route choices", accent: warningBanner == nil ? nil : Color.orange.opacity(0.8)),
+            DriverMetric(symbol: "water.waves", label: "Waves", value: heroWavesText, detail: "Sea state impact on ride quality", accent: DayForItPalette.oceanDeep.opacity(0.7)),
+            DriverMetric(symbol: "arrow.up.and.down", label: "Tide", value: heroTideText, detail: "Windowing support for launch/return", accent: DayForItPalette.okay.opacity(0.7)),
+            DriverMetric(symbol: "exclamationmark.triangle.fill", label: "Warnings", value: warningBanner == nil ? "None" : "Active", detail: warningBanner == nil ? "No active marine warnings" : "Watch timing and route choices", accent: warningBanner == nil ? nil : DayForItPalette.hold.opacity(0.8)),
         ]
     }
 

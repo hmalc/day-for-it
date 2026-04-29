@@ -13,6 +13,46 @@ enum BoatingUITheme {
     static let sectionRadius: CGFloat = 24
 }
 
+enum DayForItPalette {
+    static let sky = Color(red: 0.54, green: 0.87, blue: 0.94)
+    static let skyDeep = Color(red: 0.22, green: 0.72, blue: 0.88)
+    static let ocean = Color(red: 0.09, green: 0.62, blue: 0.76)
+    static let oceanDeep = Color(red: 0.04, green: 0.47, blue: 0.64)
+    static let sun = Color(red: 1.00, green: 0.86, blue: 0.50)
+    static let ink = Color(red: 0.04, green: 0.22, blue: 0.27)
+    static let appBackground = Color(red: 0.95, green: 0.985, blue: 0.99)
+
+    static let calm = Color(red: 0.20, green: 0.64, blue: 0.82)
+    static let okay = Color(red: 0.38, green: 0.62, blue: 0.74)
+    static let caution = Color(red: 0.58, green: 0.64, blue: 0.68)
+    static let hold = Color(red: 0.34, green: 0.40, blue: 0.45)
+
+    static var pageBackground: LinearGradient {
+        LinearGradient(
+            colors: [
+                appBackground,
+                sky.opacity(0.18),
+                Color(uiColor: .systemGroupedBackground)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    static func cardWash(accent: Color) -> LinearGradient {
+        LinearGradient(
+            colors: [
+                sky.opacity(0.12),
+                sun.opacity(0.035),
+                accent.opacity(0.07),
+                .clear
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+}
+
 enum CalmnessVisualStyle {
     case calm
     case okay
@@ -29,10 +69,10 @@ enum CalmnessVisualStyle {
 
     var tint: Color {
         switch self {
-        case .calm: return Color(red: 0.20, green: 0.68, blue: 0.38)
-        case .okay: return Color(red: 0.18, green: 0.46, blue: 0.90)
-        case .caution: return Color(red: 0.92, green: 0.58, blue: 0.18)
-        case .notRecommended: return Color(red: 0.88, green: 0.26, blue: 0.26)
+        case .calm: return DayForItPalette.calm
+        case .okay: return DayForItPalette.okay
+        case .caution: return DayForItPalette.caution
+        case .notRecommended: return DayForItPalette.hold
         }
     }
 }
@@ -55,7 +95,7 @@ struct CardSurfaceModifier: ViewModifier {
                         .fill(Color(uiColor: .secondarySystemGroupedBackground))
                         .overlay(
                             RoundedRectangle(cornerRadius: BoatingUITheme.heroRadius, style: .continuous)
-                                .fill(style.tint.opacity(0.10))
+                                .fill(DayForItPalette.cardWash(accent: style.tint))
                         )
                         .overlay(alignment: .top) {
                             RoundedRectangle(cornerRadius: BoatingUITheme.heroRadius, style: .continuous)
