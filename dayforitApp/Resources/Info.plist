@@ -24,6 +24,19 @@
     <true/>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Day For It uses your location only when you ask it to choose a supported Australian coastal forecast area, with tide and wave data where available.</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>dayforit-dev-api-822158680.ap-southeast-2.elb.amazonaws.com</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+            </dict>
+        </dict>
+    </dict>
     <key>UIApplicationSceneManifest</key>
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>

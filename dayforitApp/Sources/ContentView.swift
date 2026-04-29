@@ -11,6 +11,7 @@ struct ContentView: View {
 
     private enum TopTab: String, CaseIterable, Identifiable {
         case summary = "Summary"
+        case opportunities = "Week"
         case tides = "Tides"
 
         var id: String { rawValue }
@@ -40,6 +41,15 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .scrollBounceBehavior(.always)
                         .refreshable { await model.refresh() }
+                    }
+                } else if selectedTab == .opportunities {
+                    GeometryReader { geo in
+                        ScrollView {
+                            OpportunitiesView(availableHeight: geo.size.height)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .scrollBounceBehavior(.always)
+                        .refreshable { await model.refreshOpportunities() }
                     }
                 } else {
                     GeometryReader { geo in

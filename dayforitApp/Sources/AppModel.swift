@@ -118,24 +118,38 @@ final class AppModel: ObservableObject {
     @Published var savedOverride: StoredLocation?
     @Published var tideForecast: TideForecast?
     @Published var tideStatusMessage: String?
+    @Published var isLoadingOpportunities = false
+    @Published var opportunityErrorMessage: String?
+    @Published var opportunityRecommendations: [OpportunityRecommendation] = []
+    @Published var opportunityAttribution: String?
+    @Published var opportunityFetchedAt: Date?
+    @Published var selectedOpportunityInterestIDs = Set(OpportunityActivity.all.map(\.id))
+    @Published var opportunityFeedback: [String: String] = [:]
 
     let locationManager: LocationManager
 
     private let forecastService: MarineForecastService
+    private let opportunityClient: OpportunityClientProtocol
+    private let opportunityClientIDStore: OpportunityClientIDStore
     private let locationStore: LocationStore
     private let tideProvider: TideDataProvider
     private let tideStore: TideStore
     private var pendingCurrentLocationSelection = false
     private var refreshGeneration = 0
+    private var opportunityRefreshGeneration = 0
 
     init(
         locationManager: LocationManager = .init(),
         forecastService: MarineForecastService = .init(),
+        opportunityClient: OpportunityClientProtocol = OpportunityClient(),
+        opportunityClientIDStore: OpportunityClientIDStore = .init(),
         locationStore: LocationStore = .init(),
         tideProvider: TideDataProvider = QueenslandTideDataProvider()
     ) {
         self.locationManager = locationManager
         self.forecastService = forecastService
+        self.opportunityClient = opportunityClient
+        self.opportunityClientIDStore = opportunityClientIDStore
         self.locationStore = locationStore
         self.tideProvider = tideProvider
         self.tideStore = .init()
@@ -287,6 +301,18 @@ final class AppModel: ObservableObject {
             return "Just now"
         }
         return Self.relativeDateFormatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    var opportunityUpdatedText: String? {
+        guard let date = opportunityFetchedAt else { return nil }
+        if abs(date.timeIntervalSinceNow) < 45 {
+            return "Just now"
+        }
+        return Self.relativeDateFormatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    var topOpportunity: OpportunityRecommendation? {
+        opportunityRecommendations.first
     }
 
     var heroSupportingText: String {
@@ -453,6 +479,74 @@ final class AppModel: ObservableObject {
 
     func refresh() async {
         await refreshFullData(clearsExistingData: true, allowsCachedTideFallback: false)
+    }
+
+    func loadOpportunitiesIfNeeded() async {
+        guard opportunityRecommendations.isEmpty else { return }
+        await refreshOpportunities()
+    }
+
+    func refreshOpportunities() async {
+        opportunityRefreshGeneration += 1
+        let generation = opportunityRefreshGeneration
+        isLoadingOpportunities = true
+        opportunityErrorMessage = nil
+        defer {
+            if generation == opportunityRefreshGeneration {
+                isLoadingOpportunities = false
+            }
+        }
+
+        let location = effectiveLocation()
+        let interests = OpportunityActivity.all
+            .map(\.id)
+            .filter { selectedOpportunityInterestIDs.contains($0) }
+
+        do {
+            let response = try await opportunityClient.scan(
+                location: location,
+                clientID: opportunityClientIDStore.loadOrCreate(),
+                interests: interests.isEmpty ? OpportunityActivity.all.map(\.id) : interests
+            )
+            guard generation == opportunityRefreshGeneration else { return }
+            opportunityRecommendations = response.recommendations
+            opportunityAttribution = response.attribution
+            opportunityFetchedAt = response.fetchedAt
+        } catch {
+            guard generation == opportunityRefreshGeneration else { return }
+            if let urlError = error as? URLError {
+                opportunityErrorMessage = "Could not scan opportunities (\(urlError.code.rawValue)). Pull to retry."
+            } else {
+                opportunityErrorMessage = "Could not scan opportunities. Pull to retry."
+            }
+        }
+    }
+
+    func toggleOpportunityInterest(_ id: String) {
+        if selectedOpportunityInterestIDs.contains(id) {
+            selectedOpportunityInterestIDs.remove(id)
+        } else {
+            selectedOpportunityInterestIDs.insert(id)
+        }
+        Task { await refreshOpportunities() }
+    }
+
+    func submitOpportunityFeedback(recommendation: OpportunityRecommendation, feedback: OpportunityFeedback, label: String) {
+        opportunityFeedback[recommendation.id] = label
+        Task {
+            do {
+                try await opportunityClient.submitFeedback(
+                    recommendationID: recommendation.id,
+                    clientID: opportunityClientIDStore.loadOrCreate(),
+                    feedback: feedback
+                )
+            } catch {
+                await MainActor.run {
+                    opportunityFeedback[recommendation.id] = nil
+                    opportunityErrorMessage = "Could not save feedback. Try again."
+                }
+            }
+        }
     }
 
     private func refreshFullData(clearsExistingData: Bool, allowsCachedTideFallback: Bool) async {
@@ -623,10 +717,22 @@ final class AppModel: ObservableObject {
 
     private func refreshAfterLocationChange() {
         refreshGeneration += 1
+        opportunityRefreshGeneration += 1
+        let shouldRefreshOpportunities = isLoadingOpportunities || opportunityFetchedAt != nil || !opportunityRecommendations.isEmpty
         isLoading = true
         errorMessage = nil
+        opportunityErrorMessage = nil
         clearDisplayedData(clearStoredTide: true)
-        Task { await refreshFullData(clearsExistingData: false, allowsCachedTideFallback: false) }
+        opportunityRecommendations = []
+        opportunityFetchedAt = nil
+        opportunityAttribution = nil
+        opportunityFeedback = [:]
+        Task {
+            await refreshFullData(clearsExistingData: false, allowsCachedTideFallback: false)
+            if shouldRefreshOpportunities {
+                await refreshOpportunities()
+            }
+        }
     }
 
     private func clearDisplayedData(clearStoredTide: Bool) {

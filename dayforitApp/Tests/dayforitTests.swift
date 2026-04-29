@@ -3,6 +3,86 @@ import XCTest
 import WeatherCore
 
 final class dayforitTests: XCTestCase {
+    func testOpportunityClientIDPersistsAnonymously() {
+        let defaults = UserDefaults(suiteName: "dayforitTestsOpportunityClientID")!
+        defaults.removePersistentDomain(forName: "dayforitTestsOpportunityClientID")
+        let store = OpportunityClientIDStore(defaults: defaults)
+
+        let firstID = store.loadOrCreate()
+        let secondID = store.loadOrCreate()
+
+        XCTAssertFalse(firstID.isEmpty)
+        XCTAssertEqual(firstID, secondID)
+    }
+
+    func testOpportunityRecommendationDecodesNullableArrays() throws {
+        let json = """
+        {
+          "id": "rec_nullable",
+          "activity": "picnic",
+          "title": "Outdoor social window sunday morning",
+          "description": "This looks like a comfortable outdoor social window.",
+          "window": {
+            "start": "2026-05-03T09:00:00+10:00",
+            "end": "2026-05-03T12:00:00+10:00"
+          },
+          "priority": "high",
+          "confidence": "medium",
+          "verdict": "recommended",
+          "final_score": 99.8,
+          "suitability_score": 99.6,
+          "opportunity_score": 100,
+          "relevance_score": 100,
+          "reasons": null,
+          "risk_flags": null,
+          "invalidation_conditions": null,
+          "feedback_prompt": "Was this a good picnic or BBQ recommendation?",
+          "scoring_version": "rules-v0.1.0"
+        }
+        """
+        let recommendation = try Self.opportunityJSONDecoder.decode(
+            OpportunityRecommendation.self,
+            from: Data(json.utf8)
+        )
+
+        XCTAssertEqual(recommendation.reasons, [])
+        XCTAssertEqual(recommendation.riskFlags, [])
+        XCTAssertEqual(recommendation.invalidationConditions, [])
+    }
+
+
+    @MainActor
+    func testOpportunityRefreshStoresRecommendations() async {
+        let defaults = UserDefaults(suiteName: "dayforitTestsOpportunityRefresh")!
+        defaults.removePersistentDomain(forName: "dayforitTestsOpportunityRefresh")
+        let recommendation = Self.makeRecommendation(activity: "picnic", score: 91)
+        let response = OpportunityScanResponse(
+            fetchedAt: Date(timeIntervalSince1970: 1_800_000_000),
+            forecastSnapshotID: "forecast_test",
+            recommendations: [recommendation],
+            attribution: "Weather data by Open-Meteo"
+        )
+        let client = FakeOpportunityClient(response: response)
+        let model = AppModel(
+            opportunityClient: client,
+            opportunityClientIDStore: OpportunityClientIDStore(defaults: defaults)
+        )
+        model.savedOverride = StoredLocation(
+            name: "Brisbane",
+            latitude: -27.4698,
+            longitude: 153.0251,
+            timeZoneID: "Australia/Brisbane"
+        )
+
+        await model.refreshOpportunities()
+
+        XCTAssertEqual(model.opportunityRecommendations, [recommendation])
+        XCTAssertEqual(model.opportunityAttribution, "Weather data by Open-Meteo")
+        XCTAssertEqual(client.scannedLocation?.name, "Brisbane")
+        XCTAssertEqual(Set(client.scannedInterests ?? []), Set(OpportunityActivity.all.map(\.id)))
+        XCTAssertFalse(client.scannedClientID?.isEmpty ?? true)
+    }
+
     @MainActor
     func testLocationOverrideTakesPrecedence() {
         let defaults = UserDefaults(suiteName: "dayforitTests")!
@@ -134,5 +214,66 @@ final class dayforitTests: XCTestCase {
         XCTAssertTrue(futureLabel.contains("predicted"))
         XCTAssertFalse(futureLabel.contains("rising"))
         XCTAssertFalse(futureLabel.contains("falling"))
+    }
+
+    private static func makeRecommendation(activity: String, score: Double) -> OpportunityRecommendation {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        return OpportunityRecommendation(
+            id: "rec_test",
+            activity: activity,
+            title: "Friday evening is your best BBQ window",
+            description: "Low wind and low rain risk make this the clearest outdoor window.",
+            window: .init(start: start, end: start.addingTimeInterval(3 * 60 * 60)),
+            priority: "high",
+            confidence: "medium",
+            verdict: "recommended",
+            finalScore: score,
+            suitabilityScore: 92,
+            opportunityScore: 88,
+            relevanceScore: 100,
+            reasons: ["Low rain risk", "Comfortable temperature"],
+            riskFlags: [],
+            invalidationConditions: [],
+            feedbackPrompt: "Was this a good recommendation?",
+            scoringVersion: "rules-v0.1.0"
+        )
+    }
+
+    private static let opportunityJSONDecoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let raw = try container.decode(String.self)
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime]
+            if let date = formatter.date(from: raw) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO-8601 date: \(raw)")
+        }
+        return decoder
+    }()
+}
+
+private final class FakeOpportunityClient: OpportunityClientProtocol {
+    let response: OpportunityScanResponse
+    private(set) var scannedLocation: MarineLocation?
+    private(set) var scannedClientID: String?
+    private(set) var scannedInterests: [String]?
+    private(set) var feedback: OpportunityFeedback?
+
+    init(response: OpportunityScanResponse) {
+        self.response = response
+    }
+
+    func scan(location: MarineLocation, clientID: String, interests: [String]) async throws -> OpportunityScanResponse {
+        scannedLocation = location
+        scannedClientID = clientID
+        scannedInterests = interests
+        return response
+    }
+
+    func submitFeedback(recommendationID: String, clientID: String, feedback: OpportunityFeedback) async throws {
+        self.feedback = feedback
     }
 }

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		12000590D14067364A44B35A /* PleasantnessEngine in Frameworks */ = {isa = PBXBuildFile; productRef = AE74A6C69DC2F274A403D3E0 /* PleasantnessEngine */; };
+		136F35C4BED180B2B438DA31 /* OpportunitiesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D155F3E272381C7E9D7A3C22 /* OpportunitiesView.swift */; };
 		1B33136642B7DADD6F1EFA55 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C579CEAF83C19D667245BDA9 /* PrivacyInfo.xcprivacy */; };
 		30C25EE65FFB7E5D6A863A47 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD76938961AEB69054BF664F /* LocationManager.swift */; };
 		3B614BB644381C617869AA20 /* KeyDriversGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E91516E0F0741B1E2F10923 /* KeyDriversGrid.swift */; };
@@ -24,6 +25,7 @@
 		A5D6F0DD7AA17703862FC808 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B191410419141AE61BAE4246 /* HomeView.swift */; };
 		A636834396162491DB35E956 /* SourceAndUpdateInfoCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B31B07163D862203D3DBF6E /* SourceAndUpdateInfoCard.swift */; };
 		B4B238C1C13F4172EA3E8141 /* DriverListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AE4FFA207650D735EAF7341 /* DriverListView.swift */; };
+		B4D9EAEB4133E231828F59D7 /* OpportunityAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67599A3DF0F76F3A39833E4A /* OpportunityAPI.swift */; };
 		B62BC4E6D12CA08BF7F8C773 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FCF7E96C023646444E9BC7F8 /* Assets.xcassets */; };
 		D82712EB0A2D53D0225488D3 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE3FBC49FF64F2C8998E3F /* ContentView.swift */; };
 		DC3FED6D09E53CA6C455ECB2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24172E83314B9697F34DF238 /* SettingsView.swift */; };
@@ -53,6 +55,7 @@
 		501C2BEA7314320D3290BA44 /* DayScoreStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayScoreStripView.swift; sourceTree = "<group>"; };
 		5AE4FFA207650D735EAF7341 /* DriverListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverListView.swift; sourceTree = "<group>"; };
 		5CAA2EA900F668888CCABF45 /* WarningBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WarningBannerView.swift; sourceTree = "<group>"; };
+		67599A3DF0F76F3A39833E4A /* OpportunityAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunityAPI.swift; sourceTree = "<group>"; };
 		7004D9DE657608FAF05136A4 /* HeroRecommendationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroRecommendationCard.swift; sourceTree = "<group>"; };
 		7F25691B130E0398DD05C7C9 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		8AC166E0E6F3A21E90947738 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
@@ -62,6 +65,7 @@
 		CA4303C92A2A91A89C8C37D7 /* dayforit.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = dayforit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBB3823B9310A0A83C1869B5 /* dayforitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dayforitTests.swift; sourceTree = "<group>"; };
 		CD76938961AEB69054BF664F /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		D155F3E272381C7E9D7A3C22 /* OpportunitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunitiesView.swift; sourceTree = "<group>"; };
 		D75E23B41B9C44E30AAC1EF1 /* dayforitApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dayforitApp.swift; sourceTree = "<group>"; };
 		E593C8A718F6CE56CBE6546F /* NextChangesCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextChangesCard.swift; sourceTree = "<group>"; };
 		E8B766B861693E68CDEC122E /* TideCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TideCard.swift; sourceTree = "<group>"; };
@@ -129,6 +133,8 @@
 				CD76938961AEB69054BF664F /* LocationManager.swift */,
 				C424F9045B2B6F218CF12F76 /* LocationStore.swift */,
 				E593C8A718F6CE56CBE6546F /* NextChangesCard.swift */,
+				D155F3E272381C7E9D7A3C22 /* OpportunitiesView.swift */,
+				67599A3DF0F76F3A39833E4A /* OpportunityAPI.swift */,
 				24172E83314B9697F34DF238 /* SettingsView.swift */,
 				3B31B07163D862203D3DBF6E /* SourceAndUpdateInfoCard.swift */,
 				E8B766B861693E68CDEC122E /* TideCard.swift */,
@@ -274,6 +280,8 @@
 				30C25EE65FFB7E5D6A863A47 /* LocationManager.swift in Sources */,
 				46300ABE7678728D73E5690E /* LocationStore.swift in Sources */,
 				91C4F90260CC23F8B05F371D /* NextChangesCard.swift in Sources */,
+				136F35C4BED180B2B438DA31 /* OpportunitiesView.swift in Sources */,
+				B4D9EAEB4133E231828F59D7 /* OpportunityAPI.swift in Sources */,
 				DC3FED6D09E53CA6C455ECB2 /* SettingsView.swift in Sources */,
 				A636834396162491DB35E956 /* SourceAndUpdateInfoCard.swift in Sources */,
 				7CC1384ACD926D61FDEDE604 /* TideCard.swift in Sources */,
