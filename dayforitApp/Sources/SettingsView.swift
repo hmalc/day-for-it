@@ -13,6 +13,24 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Notifications") {
+                    Toggle("Day for it alerts", isOn: Binding(
+                        get: { model.alertsEnabled },
+                        set: { newValue in
+                            Task { await model.setAlertsEnabled(newValue) }
+                        }
+                    ))
+                    if model.alertsPermissionDenied {
+                        Text("Notifications are turned off for Day For It in iOS Settings. Allow them there to receive alerts.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Checks the official forecast in the background a few times a day and notifies you when an upcoming day first reaches \u{201C}Day for it\u{201D}. One alert per day, per location.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("Location") {
                     if let override = model.savedOverride {
                         LabeledContent("Using", value: override.name)
@@ -89,7 +107,7 @@ struct SettingsView: View {
                     Button("Refresh now") {
                         Task { await model.refresh() }
                     }
-                    Text("Refresh downloads the latest available official marine forecast, warning, and observation data. Queensland areas also use official tide predictions and wave observations. The Week tab separately scans the Day For It backend for weather opportunity recommendations.")
+                    Text("Refresh downloads the latest available official marine forecast, warning, and observation data. Queensland areas also use official tide predictions and wave observations.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -110,17 +128,11 @@ struct SettingsView: View {
                     Text("Current location is only requested when you tap the current-location button. A selected manual, preset, or current-location coordinate is stored on this device as an app preference and can be replaced by choosing another area or returning to the default.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    Text("Weather opportunity scans send the selected coordinate, selected interests, and an anonymous on-device client ID to the Day For It backend. One-tap recommendation feedback is stored with that anonymous ID so recommendations can be improved without creating an account.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                     Link("Privacy policy", destination: Self.privacyPolicyURL)
                 }
 
                 Section("Sources and attribution") {
                     Text("Marine forecasts, observations, and warnings are sourced from the Australian Bureau of Meteorology. Queensland tide predictions are sourced from Maritime Safety Queensland open data; predicted tide data is produced by the Australian Bureau of Meteorology and published through Queensland Government open data. Queensland wave observations and sea-surface temperature are sourced from Queensland Government Coastal Data System open data.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    Text("Weather opportunity recommendations use forecast and marine forecast data from Open-Meteo, processed by the Day For It backend.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     Text("Day For It is an independent app and is not endorsed by Apple, the Bureau of Meteorology, Maritime Safety Queensland, or the Queensland Government.")
@@ -129,13 +141,9 @@ struct SettingsView: View {
                     Link("Bureau of Meteorology", destination: Self.bomURL)
                     Link("Maritime Safety Queensland tide data", destination: Self.msqTideDataURL)
                     Link("Queensland wave data", destination: Self.qldWaveDataURL)
-                    Link("Open-Meteo", destination: Self.openMeteoURL)
                     Link("Support and feedback", destination: Self.supportURL)
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(DayForItPalette.pageBackground.ignoresSafeArea())
-            .tint(DayForItPalette.oceanDeep)
             .navigationTitle("Settings")
             .onAppear {
                 presetPickerIsReady = false
@@ -182,5 +190,4 @@ struct SettingsView: View {
     private static let bomURL = URL(string: "https://www.bom.gov.au/")!
     private static let msqTideDataURL = URL(string: "https://www.tmr.qld.gov.au/msqinternet/tides/open-data")!
     private static let qldWaveDataURL = URL(string: "https://www.data.qld.gov.au/dataset/coastal-data-system-near-real-time-wave-data")!
-    private static let openMeteoURL = URL(string: "https://open-meteo.com/")!
 }

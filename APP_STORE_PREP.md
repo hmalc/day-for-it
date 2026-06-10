@@ -1,6 +1,6 @@
 # App Store Prep Audit
 
-Last updated: April 27, 2026
+Last updated: June 10, 2026
 
 ## Addressed In App
 
@@ -8,7 +8,9 @@ Last updated: April 27, 2026
 - Settings includes privacy, support, and source/attribution links.
 - Location permission copy explains the user-triggered supported coastal-area purpose.
 - Privacy manifest declares no tracking, no collected data types, and the UserDefaults required-reason API for app-only preference storage.
-- The app does not request background location, accounts, tracking, advertising, analytics, HealthKit, payments, notifications, or user-generated content permissions.
+- The app does not request background location, accounts, tracking, advertising, analytics, HealthKit, payments, or user-generated content permissions.
+- Notifications are optional, local-only, and opt-in via a Settings toggle: a BGAppRefreshTask re-fetches the official forecast a few times a day and posts a local notification when an upcoming day first reaches "Day for it". No remote push, no server, no device token. The background fetch mode and task identifier (com.hmalc.dayforit.refresh) are declared in Info.plist.
+- The former opportunities backend integration (and its plain-HTTP ATS exception) has been removed; the app talks only to official data feeds over HTTPS.
 - Pull-to-refresh remains available on Summary and Tides.
 - Dynamic Type fallback remains in place for dense forecast layouts.
 - Reduce Motion is respected in loading and hero animation paths already present in the app.

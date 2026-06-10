@@ -72,8 +72,6 @@ public struct MarineSnapshotAssembler: Sendable {
                 locationID: snapshot.locationID,
                 targetWindow: window,
                 forecastWindKmh: dayForecast?.windSpeedKmh ?? FieldValue(value: nil, state: .missing, reason: "No forecast period"),
-                tideSuitability: dayTide?.suitability ?? FieldValue(value: nil, state: .notProvided, reason: "No tide prediction"),
-                rainProbability: dayForecast?.rainfallProb ?? FieldValue(value: nil, state: .unknown),
                 warningSeverity: warningSeverity,
                 provenanceRefs: provenanceRefs,
                 observedWindKmh: dayObservation?.windSpeedKmh ?? FieldValue(value: nil, state: .notProvided),
@@ -81,7 +79,8 @@ public struct MarineSnapshotAssembler: Sendable {
                 waveHeightM: waveHeight,
                 swellHeightM: dayForecast?.swellHeightM ?? FieldValue(value: nil, state: .notProvided),
                 wavePeriodS: wavePeriod,
-                seaSurfaceTempC: seaSurfaceTemp
+                seaSurfaceTempC: seaSurfaceTemp,
+                severeWeatherMention: dayForecast?.severeWeatherMention
             )
         }
     }
@@ -100,35 +99,33 @@ public struct MarineSnapshotAssembler: Sendable {
             }
 
             let windForScore = maxAvailable(input.forecastWindKmh.value, input.observedWindKmh.value)
-            let waveForScore = maxAvailable(input.waveHeightM.value, matchingForecast?.waveHeightM.value)
-            let score = BoatDayScorer.score(
+            let seasForScore = maxAvailable(
+                maxAvailable(input.waveHeightM.value, matchingForecast?.waveHeightM.value),
+                input.swellHeightM.value
+            )
+            let result = DayVerdictScorer.verdict(
                 windKmh: windForScore,
                 windGustKmh: input.observedWindGustKmh.value,
-                tideSuitability: input.tideSuitability.value,
-                rainProbability: input.rainProbability.value,
-                hasStrongWarning: hasStrongWarning,
-                waveHeightM: waveForScore,
-                swellHeightM: input.swellHeightM.value,
-                wavePeriodS: input.wavePeriodS.value
+                seasM: seasForScore,
+                warning: warning.map(warningClass),
+                severeWeatherMention: input.severeWeatherMention
             )
 
-            var drivers = quantifiedDrivers(input: input) + score.reasons
+            var drivers = quantifiedDrivers(input: input) + (result?.reasons ?? [])
             if let tideSummary = snapshot.tides.first(where: { $0.window.startUTC <= input.targetWindow.startUTC && $0.window.endUTC > input.targetWindow.startUTC })?.summary {
                 drivers.append(tideSummary)
             }
+            if result == nil {
+                drivers.append("Official forecast could not be quantified for this day.")
+            }
 
             let hasWind = windForScore != nil
-            let hasTide = input.tideSuitability.value != nil
-            let hasSea = waveForScore != nil
-            let hasRain = input.rainProbability.value != nil
-            let signalCount = [hasWind, hasTide, hasSea, hasRain].filter { $0 }.count
-            let available = matchingForecast != nil || hasTide
-            let confidence = signalCount >= 3 ? "high" : signalCount >= 2 ? "medium" : "low"
+            let hasSea = seasForScore != nil
+            let confidence = hasWind && hasSea ? "high" : hasWind || hasSea ? "medium" : "low"
             return DailyMarineSummary(
                 dayStart: input.targetWindow.startUTC,
-                pleasantness: available ? score.score : nil,
-                rating: available ? score.rating : .amber,
-                availability: available ? .available : .unavailable,
+                verdict: result?.verdict,
+                limitedBy: result?.limitedBy,
                 confidence: confidence,
                 warningLimited: hasStrongWarning,
                 topDrivers: drivers
@@ -144,22 +141,19 @@ public struct MarineSnapshotAssembler: Sendable {
         return MarineForecastOutput(
             location: requestLocation,
             generatedAt: Date(),
-            hourly: [],
             daily: daily,
             warnings: warnings,
-            coastalExcerpt: nil,
             dataQuality: dataQuality,
             degradedReason: degradedReason
         )
     }
 
-    static func heuristicRainProbability(from text: String) -> Double? {
-        let lower = text.lowercased()
-        if lower.contains("thunderstorm") { return 0.75 }
-        if lower.contains("showers") { return 0.55 }
-        if lower.contains("rain") { return 0.5 }
-        if lower.contains("cloudy") { return 0.25 }
-        return 0.1
+    private func warningClass(_ severity: MarineWarningSeverity) -> MarineWarningClass {
+        switch severity {
+        case .minor: return .advisory
+        case .strong: return .strong
+        case .severe: return .severe
+        }
     }
 
     private func strongestWarningSeverity(_ warnings: [MarineWarning]) -> FieldValue<MarineWarningSeverity> {

@@ -60,17 +60,14 @@ public struct MarineForecastService: Sendable {
             let daily = Self.placeholderDays(
                 from: now,
                 forecastDays: request.forecastDays,
-                includeToday: false,
                 calendar: .current,
                 reason: "Network issue while reaching forecast services."
             )
             return MarineForecastOutput(
                 location: request.location,
                 generatedAt: now,
-                hourly: [],
                 daily: daily,
                 warnings: [],
-                coastalExcerpt: nil,
                 dataQuality: .minimal,
                 degradedReason: "Network issue while reaching forecast services. Please retry."
             )
@@ -97,19 +94,16 @@ public struct MarineForecastService: Sendable {
     private static func placeholderDays(
         from start: Date,
         forecastDays: Int,
-        includeToday: Bool,
         calendar: Calendar,
         reason: String
     ) -> [DailyMarineSummary] {
         let day0 = calendar.startOfDay(for: start)
         return (0 ..< max(1, forecastDays)).compactMap { offset in
             guard let day = calendar.date(byAdding: .day, value: offset, to: day0) else { return nil }
-            let isToday = offset == 0
             return DailyMarineSummary(
                 dayStart: day,
-                pleasantness: includeToday && isToday ? 50 : nil,
-                rating: includeToday && isToday ? .amber : .red,
-                availability: includeToday && isToday ? .available : .unavailable,
+                verdict: nil,
+                limitedBy: nil,
                 confidence: "low",
                 warningLimited: false,
                 topDrivers: [reason]

@@ -118,7 +118,9 @@ public struct MarineForecast: Sendable, Equatable, Identifiable {
     public var windGustKmh: FieldValue<Double>
     public var waveHeightM: FieldValue<Double>
     public var swellHeightM: FieldValue<Double>
-    public var rainfallProb: FieldValue<Double>
+    /// Hazard keyword (e.g. "thunderstorms") found in the official forecast
+    /// weather/caution text, if any. Text mention only — no invented probability.
+    public var severeWeatherMention: String?
     public var freshness: FreshnessStatus
     public var provenance: ProvenanceRef
 
@@ -130,7 +132,7 @@ public struct MarineForecast: Sendable, Equatable, Identifiable {
         windGustKmh: FieldValue<Double>,
         waveHeightM: FieldValue<Double>,
         swellHeightM: FieldValue<Double>,
-        rainfallProb: FieldValue<Double>,
+        severeWeatherMention: String? = nil,
         freshness: FreshnessStatus = .unknown,
         provenance: ProvenanceRef
     ) {
@@ -141,7 +143,7 @@ public struct MarineForecast: Sendable, Equatable, Identifiable {
         self.windGustKmh = windGustKmh
         self.waveHeightM = waveHeightM
         self.swellHeightM = swellHeightM
-        self.rainfallProb = rainfallProb
+        self.severeWeatherMention = severeWeatherMention
         self.freshness = freshness
         self.provenance = provenance
     }
@@ -203,7 +205,6 @@ public struct TidePrediction: Sendable, Equatable, Identifiable {
     public var locationID: UUID
     public var window: ValidityWindow
     public var events: [TideEvent]
-    public var suitability: FieldValue<Double>
     public var summary: String?
     public var freshness: FreshnessStatus
     public var provenance: ProvenanceRef
@@ -213,7 +214,6 @@ public struct TidePrediction: Sendable, Equatable, Identifiable {
         locationID: UUID,
         window: ValidityWindow,
         events: [TideEvent],
-        suitability: FieldValue<Double>,
         summary: String? = nil,
         freshness: FreshnessStatus = .unknown,
         provenance: ProvenanceRef
@@ -222,7 +222,6 @@ public struct TidePrediction: Sendable, Equatable, Identifiable {
         self.locationID = locationID
         self.window = window
         self.events = events
-        self.suitability = suitability
         self.summary = summary
         self.freshness = freshness
         self.provenance = provenance
@@ -378,8 +377,7 @@ public struct AssessmentInput: Sendable, Equatable {
     public var swellHeightM: FieldValue<Double>
     public var wavePeriodS: FieldValue<Double>
     public var seaSurfaceTempC: FieldValue<Double>
-    public var tideSuitability: FieldValue<Double>
-    public var rainProbability: FieldValue<Double>
+    public var severeWeatherMention: String?
     public var warningSeverity: FieldValue<MarineWarningSeverity>
     public var provenanceRefs: [ProvenanceRef]
 
@@ -387,8 +385,6 @@ public struct AssessmentInput: Sendable, Equatable {
         locationID: UUID,
         targetWindow: ValidityWindow,
         forecastWindKmh: FieldValue<Double>,
-        tideSuitability: FieldValue<Double>,
-        rainProbability: FieldValue<Double>,
         warningSeverity: FieldValue<MarineWarningSeverity>,
         provenanceRefs: [ProvenanceRef],
         observedWindKmh: FieldValue<Double> = FieldValue(value: nil, state: .notProvided),
@@ -396,7 +392,8 @@ public struct AssessmentInput: Sendable, Equatable {
         waveHeightM: FieldValue<Double> = FieldValue(value: nil, state: .notProvided),
         swellHeightM: FieldValue<Double> = FieldValue(value: nil, state: .notProvided),
         wavePeriodS: FieldValue<Double> = FieldValue(value: nil, state: .notProvided),
-        seaSurfaceTempC: FieldValue<Double> = FieldValue(value: nil, state: .notProvided)
+        seaSurfaceTempC: FieldValue<Double> = FieldValue(value: nil, state: .notProvided),
+        severeWeatherMention: String? = nil
     ) {
         self.locationID = locationID
         self.targetWindow = targetWindow
@@ -407,8 +404,7 @@ public struct AssessmentInput: Sendable, Equatable {
         self.swellHeightM = swellHeightM
         self.wavePeriodS = wavePeriodS
         self.seaSurfaceTempC = seaSurfaceTempC
-        self.tideSuitability = tideSuitability
-        self.rainProbability = rainProbability
+        self.severeWeatherMention = severeWeatherMention
         self.warningSeverity = warningSeverity
         self.provenanceRefs = provenanceRefs
     }

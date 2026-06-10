@@ -10,8 +10,16 @@ final class WeatherCoreTests: XCTestCase {
     }
 
     func testMarineWarningsSeverityMapping() {
-        XCTAssertEqual(MarineWarningsParser.mapSeverity(title: "Gale Warning"), .gale)
+        XCTAssertEqual(MarineWarningsParser.mapSeverity(title: "Gale Warning"), .severe)
+        XCTAssertEqual(MarineWarningsParser.mapSeverity(title: "Storm Force Wind Warning"), .severe)
         XCTAssertEqual(MarineWarningsParser.mapSeverity(title: "Strong Wind Warning"), .strong)
+        XCTAssertEqual(MarineWarningsParser.mapSeverity(title: "Routine coastal update"), .minor)
+    }
+
+    func testSevereWeatherMentionDetection() {
+        XCTAssertEqual(MarineTextMetrics.severeWeatherMention(in: "Partly cloudy. 60% chance of thunderstorms."), "thunderstorms")
+        XCTAssertEqual(MarineTextMetrics.severeWeatherMention(in: "Squally showers offshore."), "squalls")
+        XCTAssertNil(MarineTextMetrics.severeWeatherMention(in: "Partly cloudy. Light showers."))
     }
 
     func testMarineWarningsParserIgnoresSummaryOnlyItems() throws {
@@ -184,7 +192,6 @@ final class WeatherCoreTests: XCTestCase {
             windGustKmh: FieldValue(value: nil, state: .notProvided),
             waveHeightM: FieldValue(value: nil, state: .missing),
             swellHeightM: FieldValue(value: nil, state: .missing),
-            rainfallProb: FieldValue(value: 0.1, state: .available),
             provenance: forecastProvenance
         )
         let observation = MarineObservation(
@@ -263,7 +270,6 @@ final class WeatherCoreTests: XCTestCase {
             windGustKmh: FieldValue(value: nil, state: .notProvided),
             waveHeightM: FieldValue(value: 2.0, state: .available, reason: "BOM seas and swell forecast"),
             swellHeightM: FieldValue(value: 1.5, state: .available),
-            rainfallProb: FieldValue(value: 0.55, state: .available),
             provenance: provenance
         )
         let observation = MarineObservation(
@@ -304,12 +310,13 @@ final class WeatherCoreTests: XCTestCase {
         )
 
         XCTAssertEqual(input.waveHeightM.value, 2.0)
-        XCTAssertEqual(output.daily.first?.rating, .red)
+        XCTAssertEqual(output.daily.first?.verdict, .notAChance)
+        XCTAssertEqual(output.daily.first?.limitedBy, "Strong winds (~56 km/h)")
         XCTAssertTrue(output.daily.first?.topDrivers.contains("Forecast wind up to 56 km/h") == true)
         XCTAssertTrue(output.daily.first?.topDrivers.contains("Forecast seas 2.0 m") == true)
     }
 
-    func testForecastPeriodWithSparseParsedSignalsStillProducesDailyRecommendation() {
+    func testForecastPeriodWithNoQuantifiableSignalsGetsNoVerdict() {
         let locationID = UUID()
         let start = Date(timeIntervalSince1970: 1_767_225_600)
         let end = Date(timeInterval: 86_400, since: start)
@@ -327,7 +334,6 @@ final class WeatherCoreTests: XCTestCase {
             windGustKmh: FieldValue(value: nil, state: .notProvided),
             waveHeightM: FieldValue(value: nil, state: .missing),
             swellHeightM: FieldValue(value: nil, state: .notProvided),
-            rainfallProb: FieldValue(value: nil, state: .unknown),
             provenance: provenance
         )
         let snapshot = MarineSnapshot(
@@ -344,8 +350,6 @@ final class WeatherCoreTests: XCTestCase {
             locationID: locationID,
             targetWindow: ValidityWindow(startUTC: start, endUTC: end),
             forecastWindKmh: forecast.windSpeedKmh,
-            tideSuitability: FieldValue(value: nil, state: .notProvided),
-            rainProbability: forecast.rainfallProb,
             warningSeverity: FieldValue(value: nil, state: .notProvided),
             provenanceRefs: [provenance]
         )
@@ -357,9 +361,54 @@ final class WeatherCoreTests: XCTestCase {
             forecastDays: 1
         )
 
-        XCTAssertEqual(output.daily.first?.availability, .available)
-        XCTAssertNotNil(output.daily.first?.pleasantness)
-        XCTAssertFalse(output.daily.first?.topDrivers.contains { $0.localizedCaseInsensitiveContains("pending") } == true)
+        XCTAssertNil(output.daily.first?.verdict)
+        XCTAssertEqual(output.daily.first?.confidence, "low")
+        XCTAssertTrue(output.daily.first?.topDrivers.contains { $0.localizedCaseInsensitiveContains("could not be quantified") } == true)
+    }
+
+    func testGlassyForecastDayIsADayForIt() {
+        let locationID = UUID()
+        let now = Date()
+        let start = Calendar.current.startOfDay(for: now)
+        let end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
+        let provenance = ProvenanceRef(
+            provider: "bom",
+            product: "IDQ11290",
+            sourceObjectID: "QLD_MW007",
+            fetchedAtUTC: now,
+            parsedAtUTC: now
+        )
+        let forecast = MarineForecast(
+            locationID: locationID,
+            validFor: ValidityWindow(startUTC: start, endUTC: end),
+            windSpeedKmh: FieldValue(value: 12, state: .available),
+            windGustKmh: FieldValue(value: nil, state: .notProvided),
+            waveHeightM: FieldValue(value: 0.4, state: .available),
+            swellHeightM: FieldValue(value: 0.3, state: .available),
+            provenance: provenance
+        )
+        let snapshot = MarineSnapshot(
+            locationID: locationID,
+            asOfUTC: now,
+            forecast: [forecast],
+            observations: [],
+            tides: [],
+            waveForecasts: [],
+            waveObservations: [],
+            warnings: []
+        )
+        let assembler = MarineSnapshotAssembler()
+        let inputs = assembler.buildAssessmentInputs(snapshot: snapshot, forecastDays: 1)
+
+        let output = assembler.toLegacyOutput(
+            requestLocation: MarineLocation(name: "Test Coast", latitude: -17.6, longitude: 146.1),
+            snapshot: snapshot,
+            assessmentInputs: inputs,
+            forecastDays: 1
+        )
+
+        XCTAssertEqual(output.daily.first?.verdict, .dayForIt)
+        XCTAssertEqual(output.daily.first?.confidence, "high")
     }
 
     func testParsersReadFixtureContent() throws {

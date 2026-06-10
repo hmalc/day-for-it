@@ -23,18 +23,15 @@ public enum MarineWarningsParser: Sendable {
         return delegate.items
     }
 
-    public static func mapSeverity(title: String) -> ScoringInput.WarningSeverity {
+    public static func mapSeverity(title: String) -> MarineWarningSeverity {
         let lower = title.lowercased()
-        if lower.contains("storm force") || lower.contains("hurricane") {
-            return .storm
-        }
-        if lower.contains("gale") {
-            return .gale
+        if lower.contains("storm force") || lower.contains("hurricane") || lower.contains("gale") {
+            return .severe
         }
         if lower.contains("strong wind") || lower.contains("hazardous surf") || lower.contains("severe") {
             return .strong
         }
-        return .advisory
+        return .minor
     }
 }
 

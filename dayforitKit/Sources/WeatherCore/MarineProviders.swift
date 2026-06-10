@@ -74,7 +74,7 @@ public struct BOMMarineForecastProvider: MarineForecastProvider, Sendable {
             let wind = MarineTextMetrics.maxWindKmh(from: windsText)
             let seas = MarineTextMetrics.maxMetres(from: combinedSeaText)
             let swell = MarineTextMetrics.maxMetres(from: swellText)
-            let rain = MarineSnapshotAssembler.heuristicRainProbability(from: weatherText)
+            let severeWeather = MarineTextMetrics.severeWeatherMention(in: weatherText)
 
             return MarineForecast(
                 locationID: location.id,
@@ -83,7 +83,7 @@ public struct BOMMarineForecastProvider: MarineForecastProvider, Sendable {
                 windGustKmh: FieldValue(value: nil, state: .notProvided),
                 waveHeightM: FieldValue(value: seas, state: seas == nil ? .missing : .available, reason: "BOM seas and swell forecast"),
                 swellHeightM: FieldValue(value: swell, state: swell == nil ? .missing : .available, reason: "BOM swell forecast"),
-                rainfallProb: FieldValue(value: rain, state: rain == nil ? .unknown : .available),
+                severeWeatherMention: severeWeather,
                 freshness: .fresh,
                 provenance: ProvenanceRef(
                     provider: "bom",
@@ -165,7 +165,7 @@ public struct BOMWarningProvider: MarineWarningProvider, Sendable {
             MarineWarning(
                 locationID: location.id,
                 headline: item.title,
-                severity: Self.mapSeverity(item.title),
+                severity: MarineWarningsParser.mapSeverity(title: item.title),
                 validWindow: nil,
                 issuedAtUTC: nil,
                 freshness: .unknown,
@@ -177,14 +177,6 @@ public struct BOMWarningProvider: MarineWarningProvider, Sendable {
                     parsedAtUTC: parsedAt
                 )
             )
-        }
-    }
-
-    private static func mapSeverity(_ title: String) -> MarineWarningSeverity {
-        switch MarineWarningsParser.mapSeverity(title: title) {
-        case .storm, .gale: return .severe
-        case .strong: return .strong
-        case .advisory: return .minor
         }
     }
 }
@@ -226,16 +218,12 @@ public struct TideForecastPredictionProvider: TidePredictionProvider, Sendable {
             }
             let highCount = events.filter { $0.kind == .high }.count
             let lowCount = events.filter { $0.kind == .low }.count
-            let hasHigh = highCount > 0
-            let hasLow = lowCount > 0
-            let suitability = (hasHigh && hasLow) ? 0.75 : (!day.events.isEmpty ? 0.5 : 0.25)
             let summary = Self.tideSummary(highCount: highCount, lowCount: lowCount)
             let end = calendar.date(byAdding: .day, value: 1, to: day.dayStart) ?? day.dayStart
             return TidePrediction(
                 locationID: location.id,
                 window: ValidityWindow(startUTC: day.dayStart, endUTC: end),
                 events: events,
-                suitability: FieldValue(value: suitability, state: .available),
                 summary: summary,
                 freshness: .fresh,
                 provenance: ProvenanceRef(

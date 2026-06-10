@@ -1,13 +1,21 @@
 # dayforit Data Layer Audit
 
-Last reviewed: 2026-04-28
+Last reviewed: 2026-06-10
+
+## 2026-06-10: Verdict Ladder Rebuild
+
+- The 0-100 pleasantness score and green/amber/red rating were replaced by a single five-rung verdict: Not a chance, Poor, If you must, Decent, Day for it.
+- The verdict is worst-factor-wins across wind (forecast max plus fresh observed wind/gusts), sea state (max of forecast seas, swell, and observed significant wave height), active marine warnings, and severe-weather mentions (thunderstorm/squall/waterspout/cyclone/tornado) in official forecast text.
+- "Day for it" requires positive evidence of both light wind and low seas. A day missing either signal is capped at Decent; a day with neither signal gets no verdict instead of a guess.
+- The keyword-derived rain probability heuristic was removed; it fabricated probabilities from words like "showers". Only explicit severe-weather text mentions affect the verdict now.
+- The synthetic tide suitability input (0.75 whenever a day had both highs and lows) was removed. Tide events and samples remain advisory data on the tide card and in driver text; they no longer move the verdict.
 
 ## Current Live Inputs
 
-- Bureau of Meteorology coastal waters forecast XML, keyed by state product and coastal AAC. Used for forecast wind, seas/swell, rainfall heuristics, warnings context, and daily scoring in configured Australian coastal areas.
+- Bureau of Meteorology coastal waters forecast XML, keyed by state product and coastal AAC. Used for forecast wind, seas/swell, severe-weather text mentions, warnings context, and the daily verdict in configured Australian coastal areas.
 - Bureau of Meteorology coastal observation JSON, keyed by FWO product and WMO station. Used for recent observed wind and gusts when fresh enough for the current day.
-- Bureau of Meteorology marine warning RSS. Used as a warning cap and surfaced in the UI.
-- Maritime Safety Queensland / Queensland Government tide prediction CSV resources. Used for tide samples, tide extrema, daily tide suitability, and tide charts in Queensland coverage areas.
+- Bureau of Meteorology marine warning RSS. Used as a verdict cap and surfaced in the UI.
+- Maritime Safety Queensland / Queensland Government tide prediction CSV resources. Used for tide samples, tide extrema, and tide charts in Queensland coverage areas (advisory only; not a verdict input).
 - Queensland Government Coastal Data System near-real-time wave CSV. Used for latest nearby observed significant wave height, maximum wave height, peak/zero-crossing periods, wave direction, and sea-surface temperature in Queensland coverage areas.
 
 ## Improvements Made

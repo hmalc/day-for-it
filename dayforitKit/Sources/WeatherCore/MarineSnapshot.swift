@@ -52,40 +52,28 @@ public struct MarineForecastRequest: Sendable, Equatable {
     }
 }
 
-public struct HourlyMarineSnapshot: Sendable, Equatable {
-    public var time: Date
-    public var scoringInput: ScoringInput
-    public var result: PleasantnessResult
-}
-
 public struct DailyMarineSummary: Sendable, Equatable, Identifiable {
-    public enum Availability: String, Sendable, Equatable {
-        case available
-        case unavailable
-    }
-
     public var id: Date { dayStart }
     public var dayStart: Date
-    public var pleasantness: Double?
-    public var rating: BoatDayRating
-    public var availability: Availability
+    /// nil means there was no usable data to call the day.
+    public var verdict: DayVerdict?
+    /// The worst factor, when a verdict exists.
+    public var limitedBy: String?
     public var confidence: String
     public var warningLimited: Bool
     public var topDrivers: [String]
 
     public init(
         dayStart: Date,
-        pleasantness: Double?,
-        rating: BoatDayRating,
-        availability: Availability,
+        verdict: DayVerdict?,
+        limitedBy: String?,
         confidence: String,
         warningLimited: Bool,
         topDrivers: [String]
     ) {
         self.dayStart = dayStart
-        self.pleasantness = pleasantness
-        self.rating = rating
-        self.availability = availability
+        self.verdict = verdict
+        self.limitedBy = limitedBy
         self.confidence = confidence
         self.warningLimited = warningLimited
         self.topDrivers = topDrivers
@@ -101,10 +89,24 @@ public struct MarineForecastOutput: Sendable, Equatable {
 
     public var location: MarineLocation
     public var generatedAt: Date
-    public var hourly: [HourlyMarineSnapshot]
     public var daily: [DailyMarineSummary]
     public var warnings: [MarineWarningItem]
-    public var coastalExcerpt: String?
     public var dataQuality: DataQuality
     public var degradedReason: String?
+
+    public init(
+        location: MarineLocation,
+        generatedAt: Date,
+        daily: [DailyMarineSummary],
+        warnings: [MarineWarningItem],
+        dataQuality: DataQuality,
+        degradedReason: String?
+    ) {
+        self.location = location
+        self.generatedAt = generatedAt
+        self.daily = daily
+        self.warnings = warnings
+        self.dataQuality = dataQuality
+        self.degradedReason = degradedReason
+    }
 }

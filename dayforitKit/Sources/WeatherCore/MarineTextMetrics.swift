@@ -84,11 +84,11 @@ public enum MarineTextMetrics: Sendable {
         return maxM > 0 ? maxM : nil
     }
 
-    /// Rough swell period (seconds) if text mentions "long period" etc.
-    public static func swellPeriodHint(from text: String) -> Double? {
+    /// First severe-weather hazard keyword mentioned in BOM weather/caution text, if any.
+    public static func severeWeatherMention(in text: String) -> String? {
         let lower = text.lowercased()
-        if lower.contains("long period") { return 12 }
-        if lower.contains("short period") { return 6 }
-        return nil
+        let hazards = ["thunderstorm", "squall", "waterspout", "cyclone", "tornado"]
+        guard let hit = hazards.first(where: { lower.contains($0) }) else { return nil }
+        return hit + "s"
     }
 }

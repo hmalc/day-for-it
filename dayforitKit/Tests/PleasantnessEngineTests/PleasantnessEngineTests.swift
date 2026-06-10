@@ -1,122 +1,89 @@
 import XCTest
 @testable import PleasantnessEngine
 
-final class PleasantnessEngineTests: XCTestCase {
-    func testWarningCapApplies() {
-        let input = ScoringInput(
-            windSpeedKmh: 12,
-            seaHeightMetres: 0.8,
-            activeWarnings: [
-                .init(title: "Gale Warning", severity: .gale),
-            ]
-        )
-        let result = PleasantnessEngine.evaluate(input)
-        XCTAssertLessThanOrEqual(result.index, 28)
-        XCTAssertTrue(result.isWarningLimited)
+final class DayVerdictScorerTests: XCTestCase {
+    func testGlassyDayWithLightWindIsADayForIt() {
+        let out = DayVerdictScorer.verdict(windKmh: 10, seasM: 0.3)
+
+        XCTAssertEqual(out?.verdict, .dayForIt)
+        XCTAssertTrue(out?.reasons.contains("Glassy seas (0.3 m)") == true)
     }
 
-    func testBoatDayScorerWindAndTideDriveGreen() {
-        let out = BoatDayScorer.score(
-            windKmh: 14,
-            tideSuitability: 0.8,
-            rainProbability: 0.1,
-            hasStrongWarning: false,
-            waveHeightM: 0.4
-        )
-        XCTAssertEqual(out.rating, .green)
-        XCTAssertGreaterThan(out.score, 85)
+    func testWorstFactorWinsRoughSeasOverrideLightWind() {
+        let out = DayVerdictScorer.verdict(windKmh: 10, seasM: 2.0)
+
+        XCTAssertEqual(out?.verdict, .poor)
+        XCTAssertEqual(out?.limitedBy, "Rough seas (2.0 m)")
     }
 
-    func testBoatDayScorerRewardsGlassyFineWeatherGreatTide() {
-        let out = BoatDayScorer.score(
-            windKmh: 6,
-            tideSuitability: 0.95,
-            rainProbability: 0.0,
-            hasStrongWarning: false,
-            waveHeightM: 0.15,
-            swellHeightM: 0.1
-        )
+    func testModerateWindCapsAGlassyDayAtIfYouMust() {
+        let out = DayVerdictScorer.verdict(windKmh: 28, seasM: 0.4)
 
-        XCTAssertEqual(out.rating, .green)
-        XCTAssertGreaterThanOrEqual(out.score, 98)
-        XCTAssertTrue(out.reasons.contains("Glassy seas"))
+        XCTAssertEqual(out?.verdict, .ifYouMust)
+        XCTAssertEqual(out?.limitedBy, "Moderate winds (~28 km/h)")
     }
 
-    func testBoatDayScorerStrongWarningCapsRed() {
-        let out = BoatDayScorer.score(
-            windKmh: 18,
-            tideSuitability: 0.8,
-            rainProbability: 0.2,
-            hasStrongWarning: true
-        )
-        XCTAssertEqual(out.rating, .red)
-        XCTAssertLessThanOrEqual(out.score, 30)
+    func testSevereWarningMeansNotAChance() {
+        let out = DayVerdictScorer.verdict(windKmh: 12, seasM: 0.4, warning: .severe)
+
+        XCTAssertEqual(out?.verdict, .notAChance)
+        XCTAssertEqual(out?.limitedBy, "Gale or storm-tier marine warning active")
     }
 
-    func testBoatDayScorerUsesSeaStateAndOmitsMissingSignalCopy() {
-        let out = BoatDayScorer.score(
-            windKmh: nil,
-            tideSuitability: 0.8,
-            rainProbability: 0.1,
-            hasStrongWarning: false,
-            waveHeightM: 2.0
-        )
+    func testStrongWindWarningCapsAtPoor() {
+        let out = DayVerdictScorer.verdict(windKmh: 12, seasM: 0.4, warning: .strong)
 
-        XCTAssertTrue(out.reasons.contains("Rough seas"))
-        XCTAssertFalse(out.reasons.contains { $0.localizedCaseInsensitiveContains("pending") })
-        XCTAssertFalse(out.reasons.contains { $0.localizedCaseInsensitiveContains("signal limited") })
+        XCTAssertEqual(out?.verdict, .poor)
     }
 
-    func testBoatDayScorerDoesNotAverageAwayRoughSeas() {
-        let out = BoatDayScorer.score(
-            windKmh: 10,
-            tideSuitability: 0.9,
-            rainProbability: 0.0,
-            hasStrongWarning: false,
-            waveHeightM: 2.0
-        )
+    func testMissingSeaStateCapsCeilingAtDecent() {
+        let out = DayVerdictScorer.verdict(windKmh: 6, seasM: nil)
 
-        XCTAssertEqual(out.rating, .red)
-        XCTAssertLessThanOrEqual(out.score, 40)
+        XCTAssertEqual(out?.verdict, .decent)
+        XCTAssertEqual(out?.limitedBy, "Sea state not quantified")
     }
 
-    func testBoatDayScorerCapsLumpySeasBelowGreen() {
-        let out = BoatDayScorer.score(
-            windKmh: 8,
-            tideSuitability: 0.95,
-            rainProbability: 0.0,
-            hasStrongWarning: false,
-            waveHeightM: 1.45
-        )
+    func testMissingWindCapsCeilingAtDecent() {
+        let out = DayVerdictScorer.verdict(windKmh: nil, seasM: 0.2)
 
-        XCTAssertEqual(out.rating, .amber)
-        XCTAssertLessThanOrEqual(out.score, 68)
+        XCTAssertEqual(out?.verdict, .decent)
+        XCTAssertEqual(out?.limitedBy, "Wind not quantified")
     }
 
-    func testBoatDayScorerRequiresSeaStateForGreen() {
-        let out = BoatDayScorer.score(
-            windKmh: 6,
-            tideSuitability: 0.95,
-            rainProbability: 0.0,
-            hasStrongWarning: false
-        )
-
-        XCTAssertNotEqual(out.rating, .green)
-        XCTAssertLessThanOrEqual(out.score, 72)
+    func testNoWindAndNoSeaDataMeansNoVerdict() {
+        XCTAssertNil(DayVerdictScorer.verdict(windKmh: nil, seasM: nil))
     }
 
-    func testPleasantnessEngineLetsSeaStateDominate() {
-        let input = ScoringInput(
-            windSpeedKmh: 8,
-            seaHeightMetres: 1.9,
-            swellHeightMetres: 1.2,
-            rainProbability: 0.0,
-            airTemperatureC: 24
-        )
+    func testGustsRaiseEffectiveWind() {
+        // 12 km/h sustained but 60 km/h gusts: effective 45 km/h -> poor.
+        let out = DayVerdictScorer.verdict(windKmh: 12, windGustKmh: 60, seasM: 0.4)
 
-        let result = PleasantnessEngine.evaluate(input)
+        XCTAssertEqual(out?.verdict, .poor)
+    }
 
-        XCTAssertLessThanOrEqual(result.index, 42)
-        XCTAssertTrue(result.topDrivers.contains { $0.localizedCaseInsensitiveContains("Sea motion") })
+    func testThunderstormMentionCapsAtIfYouMust() {
+        let out = DayVerdictScorer.verdict(windKmh: 8, seasM: 0.3, severeWeatherMention: "thunderstorms")
+
+        XCTAssertEqual(out?.verdict, .ifYouMust)
+        XCTAssertEqual(out?.limitedBy, "Forecast mentions thunderstorms")
+    }
+
+    func testVeryStrongWindIsNotAChance() {
+        let out = DayVerdictScorer.verdict(windKmh: 55, seasM: 0.8)
+
+        XCTAssertEqual(out?.verdict, .notAChance)
+    }
+
+    func testReasonsListWorstFactorFirst() {
+        let out = DayVerdictScorer.verdict(windKmh: 40, seasM: 0.3)
+
+        XCTAssertEqual(out?.reasons.first, "Fresh winds (~40 km/h)")
+    }
+
+    func testVerdictOrderingMatchesLadder() {
+        XCTAssertLessThan(DayVerdict.notAChance, .poor)
+        XCTAssertLessThan(DayVerdict.poor, .ifYouMust)
+        XCTAssertLessThan(DayVerdict.ifYouMust, .decent)
+        XCTAssertLessThan(DayVerdict.decent, .dayForIt)
     }
 }
