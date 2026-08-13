@@ -20,7 +20,7 @@ public struct MarineForecastService: Sendable {
         assembler = MarineSnapshotAssembler(calendar: calendar)
     }
 
-    public func fetchSevenDayForecast(request: MarineForecastRequest) async throws -> MarineForecastOutput {
+    public func fetchForecast(request: MarineForecastRequest) async throws -> MarineForecastOutput {
         let boatingLocation = request.location.toBoatingLocation(feed: request.feed)
 
         async let forecastResult: [MarineForecast]? = try? await providers.forecastProvider.fetchForecast(
@@ -92,6 +92,10 @@ public struct MarineForecastService: Sendable {
             assessmentInputs: assessmentInputs,
             forecastDays: request.forecastDays
         )
+    }
+
+    public func fetchSevenDayForecast(request: MarineForecastRequest) async throws -> MarineForecastOutput {
+        try await fetchForecast(request: request)
     }
 
     private static func placeholderDays(

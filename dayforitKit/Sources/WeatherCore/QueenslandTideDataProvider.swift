@@ -46,6 +46,7 @@ public struct QueenslandTideDataProvider: TideDataProvider, Sendable {
 
         mergedEvents = uniqueSortedEvents(mergedEvents)
         mergedSamples = uniqueSortedSamples(mergedSamples)
+        let chartMaximumMeters = Self.chartMaximumMeters(events: mergedEvents, samples: mergedSamples)
         if mergedEvents.isEmpty, !mergedSamples.isEmpty {
             mergedEvents = deriveExtrema(from: mergedSamples)
         }
@@ -80,9 +81,19 @@ public struct QueenslandTideDataProvider: TideDataProvider, Sendable {
             locationName: location.name,
             stationName: nearest.station.displayName,
             stationDistanceKm: nearest.distanceKm,
+            chartMaximumMeters: chartMaximumMeters,
             days: dayForecasts
         )
         return forecast
+    }
+
+    private static func chartMaximumMeters(events: [TideEventPoint], samples: [TideSamplePoint]) -> Double? {
+        let eventHeights = events.compactMap(\.heightMeters)
+        let sampleHeights = samples.map(\.heightMeters)
+        let plausibleHeights = (eventHeights + sampleHeights).filter { value in
+            value.isFinite && value > 0 && value < 20
+        }
+        return plausibleHeights.max()
     }
 
     private func fetchPackage(named packageName: String) async throws -> QLDTidePackage {
@@ -101,7 +112,10 @@ public struct QueenslandTideDataProvider: TideDataProvider, Sendable {
     private func fetchData(url: URL) async throws -> Data {
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         request.setValue("dayforit/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.setValue("no-cache", forHTTPHeaderField: "Pragma")
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200 ... 299).contains(http.statusCode) else {
             throw URLError(.badServerResponse)

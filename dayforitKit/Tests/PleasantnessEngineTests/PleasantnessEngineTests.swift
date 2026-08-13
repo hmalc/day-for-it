@@ -102,7 +102,7 @@ final class PleasantnessEngineTests: XCTestCase {
         )
 
         XCTAssertNotEqual(out.rating, .green)
-        XCTAssertLessThanOrEqual(out.score, 72)
+        XCTAssertLessThanOrEqual(out.score, 70)
     }
 
     func testPleasantnessEngineLetsSeaStateDominate() {
@@ -118,5 +118,20 @@ final class PleasantnessEngineTests: XCTestCase {
 
         XCTAssertLessThanOrEqual(result.index, 42)
         XCTAssertTrue(result.topDrivers.contains { $0.localizedCaseInsensitiveContains("Sea motion") })
+    }
+
+    func testPleasantnessEngineDoesNotOverPenalizeTinyWindWithSmallGust() {
+        let input = ScoringInput(
+            windSpeedKmh: 2,
+            windGustKmh: 12,
+            seaHeightMetres: 0.2,
+            rainProbability: 0.08,
+            airTemperatureC: 23
+        )
+
+        let result = PleasantnessEngine.evaluate(input)
+
+        XCTAssertGreaterThan(result.index, 88)
+        XCTAssertFalse(result.topDrivers.contains { $0.localizedCaseInsensitiveContains("Gusts") })
     }
 }

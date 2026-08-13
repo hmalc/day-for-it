@@ -4,12 +4,12 @@ import Foundation
 public enum PleasantnessEngine: Sendable {
     // MARK: - Weights (sum ≈ 1.0 for base blend before interactions)
 
-    private static let wWind = 0.22
-    private static let wSea = 0.60
-    private static let wWet = 0.08
-    private static let wVis = 0.04
-    private static let wThermal = 0.03
-    private static let wHazardText = 0.03
+    private static let wWind = 0.26
+    private static let wSea = 0.68
+    private static let wWet = 0.03
+    private static let wVis = 0.01
+    private static let wThermal = 0.00
+    private static let wHazardText = 0.02
 
     public static func evaluate(_ input: ScoringInput) -> PleasantnessResult {
         let effectiveWind = effectiveWindKmh(input)
@@ -63,7 +63,7 @@ public enum PleasantnessEngine: Sendable {
 
         return PleasantnessResult(
             index: capped,
-            subScores: [windScore, seaScore, wetScore, visScore, thermalScore, hazardScore],
+            subScores: [seaScore, windScore, wetScore, visScore, thermalScore, hazardScore],
             topDrivers: drivers,
             isWarningLimited: limited,
             warningSummary: warnSummary
@@ -79,7 +79,10 @@ public enum PleasantnessEngine: Sendable {
 
     /// Ratio of gustiness vs sustained (1 = calm match).
     private static func gustFactor(_ input: ScoringInput, effectiveWind: Double) -> Double {
-        guard let g = input.windGustKmh, effectiveWind > 0.5 else { return 1.0 }
+        guard let g = input.windGustKmh, g > 22 else { return 1.0 }
+        if effectiveWind < 8 {
+            return (1 + (g - 22) / 70).clamped(to: 1.0...1.35)
+        }
         let ratio = g / max(effectiveWind, 1)
         return ratio.clamped(to: 1.0...2.2)
     }
@@ -184,7 +187,7 @@ public enum PleasantnessEngine: Sendable {
     private static func seaStateCap(input: ScoringInput) -> Double {
         guard let roughness = explicitSeaRoughness(input) else {
             let hasWindSignal = input.windSpeedKmh != nil || input.coastalWindMaxKmh != nil || input.windGustKmh != nil
-            return hasWindSignal ? 76 : 68
+            return hasWindSignal ? 70 : 62
         }
         switch roughness {
         case ..<0.4:

@@ -51,8 +51,11 @@ public struct QueenslandWaveDataProvider: WaveProvider, Sendable {
     func fetchData(url: URL) async throws -> Data {
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         request.setValue("dayforit/1.0", forHTTPHeaderField: "User-Agent")
         request.setValue("text/csv, */*", forHTTPHeaderField: "Accept")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.setValue("no-cache", forHTTPHeaderField: "Pragma")
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200 ... 299).contains(http.statusCode) else {
             throw URLError(.badServerResponse)

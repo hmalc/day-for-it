@@ -14,6 +14,7 @@
 		3B614BB644381C617869AA20 /* KeyDriversGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E91516E0F0741B1E2F10923 /* KeyDriversGrid.swift */; };
 		3CA944CFA868525B2158376B /* BoatingUITheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F397990E1AD73871AE3A171F /* BoatingUITheme.swift */; };
 		46300ABE7678728D73E5690E /* LocationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C424F9045B2B6F218CF12F76 /* LocationStore.swift */; };
+		4B8A77B05D6C4F3A9F2C118E /* BoatingAlerting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CC8A93A06A5414F9C6206DB /* BoatingAlerting.swift */; };
 		51F0701B15DE88B561655A3E /* HeroRecommendationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7004D9DE657608FAF05136A4 /* HeroRecommendationCard.swift */; };
 		60C1C4686036D54541DFF732 /* dayforitApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D75E23B41B9C44E30AAC1EF1 /* dayforitApp.swift */; };
 		6A063A1C66771C2A3400A622 /* DetailedConditionsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDC6A13C7A52701D7199A33 /* DetailedConditionsCard.swift */; };
@@ -49,6 +50,7 @@
 		0CDC6A13C7A52701D7199A33 /* DetailedConditionsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailedConditionsCard.swift; sourceTree = "<group>"; };
 		1E91516E0F0741B1E2F10923 /* KeyDriversGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyDriversGrid.swift; sourceTree = "<group>"; };
 		24172E83314B9697F34DF238 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		2CC8A93A06A5414F9C6206DB /* BoatingAlerting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoatingAlerting.swift; sourceTree = "<group>"; };
 		31D5B2F79CD2ECB1CE41DC33 /* dayforitTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = dayforitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		34CE3FBC49FF64F2C8998E3F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		3B31B07163D862203D3DBF6E /* SourceAndUpdateInfoCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceAndUpdateInfoCard.swift; sourceTree = "<group>"; };
@@ -121,6 +123,7 @@
 			isa = PBXGroup;
 			children = (
 				8AC166E0E6F3A21E90947738 /* AppModel.swift */,
+				2CC8A93A06A5414F9C6206DB /* BoatingAlerting.swift */,
 				F397990E1AD73871AE3A171F /* BoatingUITheme.swift */,
 				34CE3FBC49FF64F2C8998E3F /* ContentView.swift */,
 				D75E23B41B9C44E30AAC1EF1 /* dayforitApp.swift */,
@@ -269,6 +272,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FAD8F4F6CD34A2563EEC2A92 /* AppModel.swift in Sources */,
+				4B8A77B05D6C4F3A9F2C118E /* BoatingAlerting.swift in Sources */,
 				3CA944CFA868525B2158376B /* BoatingUITheme.swift in Sources */,
 				D82712EB0A2D53D0225488D3 /* ContentView.swift in Sources */,
 				F0313C90F0BF6A39B81EC872 /* DayScoreStripView.swift in Sources */,

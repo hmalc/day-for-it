@@ -119,7 +119,7 @@ public enum BoatDayScorer {
             rainScore = 78
         }
 
-        var score = seaScore * 0.62 + windScore * 0.22 + tideScore * 0.08 + rainScore * 0.08
+        var score = seaScore * 0.68 + windScore * 0.26 + tideScore * 0.03 + rainScore * 0.03
         score = min(score, seaStateCap(seaRoughness))
 
         if let wind = effectiveWind {
@@ -192,7 +192,7 @@ public enum BoatDayScorer {
     }
 
     private static func seaStateCap(_ roughness: Double?) -> Double {
-        guard let roughness else { return 72 }
+        guard let roughness else { return 70 }
         switch roughness {
         case ..<0.4:
             return 100

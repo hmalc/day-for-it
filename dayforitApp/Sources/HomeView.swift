@@ -23,8 +23,7 @@ struct HomeView: View {
                     NextChangesCard(rows: model.nextChangeItems)
 
                     TideCard(
-                        summary: model.heroTideText,
-                        events: model.tideEvents
+                        pages: model.tidePageViewData
                     )
 
                     DetailedConditionsCard(rows: model.detailedRows)

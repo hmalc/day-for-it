@@ -15,6 +15,8 @@ struct OpportunityActivity: Identifiable, Equatable {
         .init(id: "boating", label: "Boating", systemImage: "sailboat")
     ]
 
+    static let clientAnchorIDs = ["boating"]
+
     static func label(for id: String) -> String {
         all.first(where: { $0.id == id })?.label ?? id.replacingOccurrences(of: "_", with: " ").capitalized
     }
@@ -43,6 +45,8 @@ struct OpportunityRecommendation: Identifiable, Decodable, Equatable {
     let invalidationConditions: [String]
     let feedbackPrompt: String
     let scoringVersion: String
+    let decisionLabel: String?
+    let analysis: OpportunityAnalysis?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -62,6 +66,8 @@ struct OpportunityRecommendation: Identifiable, Decodable, Equatable {
         case invalidationConditions = "invalidation_conditions"
         case feedbackPrompt = "feedback_prompt"
         case scoringVersion = "scoring_version"
+        case decisionLabel = "decision_label"
+        case analysis
     }
 
     init(
@@ -81,7 +87,9 @@ struct OpportunityRecommendation: Identifiable, Decodable, Equatable {
         riskFlags: [String],
         invalidationConditions: [String],
         feedbackPrompt: String,
-        scoringVersion: String
+        scoringVersion: String,
+        decisionLabel: String? = nil,
+        analysis: OpportunityAnalysis? = nil
     ) {
         self.id = id
         self.activity = activity
@@ -100,6 +108,8 @@ struct OpportunityRecommendation: Identifiable, Decodable, Equatable {
         self.invalidationConditions = invalidationConditions
         self.feedbackPrompt = feedbackPrompt
         self.scoringVersion = scoringVersion
+        self.decisionLabel = decisionLabel
+        self.analysis = analysis
     }
 
     init(from decoder: Decoder) throws {
@@ -121,17 +131,93 @@ struct OpportunityRecommendation: Identifiable, Decodable, Equatable {
         invalidationConditions = try container.decodeIfPresent([String].self, forKey: .invalidationConditions) ?? []
         feedbackPrompt = try container.decode(String.self, forKey: .feedbackPrompt)
         scoringVersion = try container.decode(String.self, forKey: .scoringVersion)
+        decisionLabel = try container.decodeIfPresent(String.self, forKey: .decisionLabel)
+        analysis = try container.decodeIfPresent(OpportunityAnalysis.self, forKey: .analysis)
+    }
+}
+
+struct OpportunityAnalysis: Decodable, Equatable {
+    let band: String?
+    let summary: String?
+    let factors: [OpportunityScoreFactor]
+    let dataSignals: [String]
+    let sourceStatus: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case band
+        case summary
+        case factors
+        case dataSignals = "data_signals"
+        case sourceStatus = "source_status"
+    }
+
+    init(
+        band: String? = nil,
+        summary: String? = nil,
+        factors: [OpportunityScoreFactor] = [],
+        dataSignals: [String] = [],
+        sourceStatus: [String] = []
+    ) {
+        self.band = band
+        self.summary = summary
+        self.factors = factors
+        self.dataSignals = dataSignals
+        self.sourceStatus = sourceStatus
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        band = try container.decodeIfPresent(String.self, forKey: .band)
+        summary = try container.decodeIfPresent(String.self, forKey: .summary)
+        factors = try container.decodeIfPresent([OpportunityScoreFactor].self, forKey: .factors) ?? []
+        dataSignals = try container.decodeIfPresent([String].self, forKey: .dataSignals) ?? []
+        sourceStatus = try container.decodeIfPresent([String].self, forKey: .sourceStatus) ?? []
+    }
+}
+
+struct OpportunityScoreFactor: Decodable, Equatable {
+    let id: String
+    let label: String
+    let score: Double
+    let detail: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case label
+        case score
+        case detail
+    }
+
+    init(id: String, label: String, score: Double, detail: String) {
+        self.id = id
+        self.label = label
+        self.score = score
+        self.detail = detail
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? "factor"
+        label = try container.decodeIfPresent(String.self, forKey: .label) ?? id
+        score = try container.decodeIfPresent(Double.self, forKey: .score) ?? 0
+        detail = try container.decodeIfPresent(String.self, forKey: .detail) ?? ""
     }
 }
 
 struct OpportunityScanResponse: Decodable, Equatable {
     let fetchedAt: Date
+    let forecastStart: Date?
+    let forecastEnd: Date?
+    let forecastDays: Int?
     let forecastSnapshotID: String?
     let recommendations: [OpportunityRecommendation]
     let attribution: String?
 
     enum CodingKeys: String, CodingKey {
         case fetchedAt = "fetched_at"
+        case forecastStart = "forecast_start"
+        case forecastEnd = "forecast_end"
+        case forecastDays = "forecast_days"
         case forecastSnapshotID = "forecast_snapshot_id"
         case recommendations
         case attribution
@@ -152,12 +238,15 @@ struct OpportunityFeedback: Equatable {
 }
 
 struct OpportunityClient: OpportunityClientProtocol {
-    var baseURL = URL(string: "http://dayforit-dev-api-822158680.ap-southeast-2.elb.amazonaws.com")!
+    static let planningHorizonDays = 10
+
+    var baseURL = URL(string: "https://wowpp9p9aj.execute-api.ap-southeast-2.amazonaws.com")!
     var session: URLSession = .shared
 
     func scan(location: MarineLocation, clientID: String, interests: [String]) async throws -> OpportunityScanResponse {
         var request = URLRequest(url: baseURL.appending(path: "/v1/recommendations/scan"))
         request.httpMethod = "POST"
+        configureFreshJSONRequest(&request)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(ScanPayload(
             clientID: clientID,
@@ -167,8 +256,9 @@ struct OpportunityClient: OpportunityClientProtocol {
                 name: location.name,
                 timezone: location.timeZoneID
             ),
-            timeRange: .init(days: 7),
-            interests: interests
+            timeRange: .init(days: Self.planningHorizonDays),
+            interests: interests,
+            preferences: .defaultBoatingDaylight
         ))
 
         let (data, response) = try await session.data(for: request)
@@ -179,6 +269,7 @@ struct OpportunityClient: OpportunityClientProtocol {
     func submitFeedback(recommendationID: String, clientID: String, feedback: OpportunityFeedback) async throws {
         var request = URLRequest(url: baseURL.appending(path: "/v1/recommendations/\(recommendationID)/feedback"))
         request.httpMethod = "POST"
+        configureFreshJSONRequest(&request)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(FeedbackPayload(
             clientID: clientID,
@@ -190,6 +281,14 @@ struct OpportunityClient: OpportunityClientProtocol {
 
         let (data, response) = try await session.data(for: request)
         try validate(response: response, data: data)
+    }
+
+    private func configureFreshJSONRequest(_ request: inout URLRequest) {
+        request.timeoutInterval = 25
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.setValue("no-cache", forHTTPHeaderField: "Pragma")
     }
 
     private func validate(response: URLResponse, data: Data) throws {
@@ -248,16 +347,28 @@ private struct ScanPayload: Encodable {
         let days: Int
     }
 
+    struct Preferences: Encodable {
+        static let defaultBoatingDaylight = Preferences(allowNightBoating: false)
+
+        let allowNightBoating: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case allowNightBoating = "allow_night_boating"
+        }
+    }
+
     let clientID: String
     let location: Location
     let timeRange: TimeRange
     let interests: [String]
+    let preferences: Preferences
 
     enum CodingKeys: String, CodingKey {
         case clientID = "client_id"
         case location
         case timeRange = "time_range"
         case interests
+        case preferences
     }
 }
 

@@ -89,7 +89,41 @@ struct SettingsView: View {
                     Button("Refresh now") {
                         Task { await model.refresh() }
                     }
-                    Text("Refresh downloads the latest available official marine forecast, warning, and observation data. Queensland areas also use official tide predictions and wave observations. The Week tab separately scans the Day For It backend for weather opportunity recommendations.")
+                    Text("Refresh downloads the latest available official marine forecast, warning, and observation data, then checks the Day For It backend for boating windows over the next 10 days. Queensland areas also use official tide predictions and wave observations.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Boating alerts") {
+                    Toggle(
+                        "High-confidence day-for-it alerts",
+                        isOn: Binding(
+                            get: { model.highConfidenceBoatingAlertsEnabled },
+                            set: { model.setHighConfidenceBoatingAlertsEnabled($0) }
+                        )
+                    )
+
+                    LabeledContent("Location", value: model.effectiveLocation().name)
+                    LabeledContent("Days", value: "Weekends and public holidays")
+                    LabeledContent("Permission", value: model.boatingAlertAuthorizationText)
+                    LabeledContent("Checks", value: "About 7am, 12pm, and 5pm")
+                    if let lastCheck = model.boatingAlertLastCheckText {
+                        LabeledContent("Last check", value: lastCheck)
+                    }
+                    if let result = model.boatingAlertLastResultText {
+                        Text(result)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Button {
+                        Task { await model.runBoatingAlertCheckNow() }
+                    } label: {
+                        Label("Check alerts now", systemImage: "bell.badge")
+                    }
+                    .disabled(!model.highConfidenceBoatingAlertsEnabled)
+
+                    Text("Alerts are intentionally rare: boating only, selected location only, weekend or public-holiday daylight windows only, high confidence, and wave/swell forecast data behind the call. iOS decides the exact background refresh timing.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -110,7 +144,7 @@ struct SettingsView: View {
                     Text("Current location is only requested when you tap the current-location button. A selected manual, preset, or current-location coordinate is stored on this device as an app preference and can be replaced by choosing another area or returning to the default.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    Text("Weather opportunity scans send the selected coordinate, selected interests, and an anonymous on-device client ID to the Day For It backend. One-tap recommendation feedback is stored with that anonymous ID so recommendations can be improved without creating an account.")
+                    Text("Boating window scans send the selected coordinate, boating interest, and an anonymous on-device client ID to the Day For It backend. One-tap recommendation feedback is stored with that anonymous ID so recommendations can be improved without creating an account.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     Link("Privacy policy", destination: Self.privacyPolicyURL)
@@ -120,7 +154,7 @@ struct SettingsView: View {
                     Text("Marine forecasts, observations, and warnings are sourced from the Australian Bureau of Meteorology. Queensland tide predictions are sourced from Maritime Safety Queensland open data; predicted tide data is produced by the Australian Bureau of Meteorology and published through Queensland Government open data. Queensland wave observations and sea-surface temperature are sourced from Queensland Government Coastal Data System open data.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    Text("Weather opportunity recommendations use forecast and marine forecast data from Open-Meteo, processed by the Day For It backend.")
+                    Text("Backend boating window recommendations use forecast and marine forecast data from Open-Meteo, processed by the Day For It backend.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     Text("Day For It is an independent app and is not endorsed by Apple, the Bureau of Meteorology, Maritime Safety Queensland, or the Queensland Government.")

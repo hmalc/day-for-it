@@ -41,6 +41,8 @@ public struct MarineFeedConfig: Sendable, Equatable {
 }
 
 public struct MarineForecastRequest: Sendable, Equatable {
+    public static let maxForecastDays = 10
+
     public var location: MarineLocation
     public var feed: MarineFeedConfig
     public var forecastDays: Int
@@ -48,7 +50,7 @@ public struct MarineForecastRequest: Sendable, Equatable {
     public init(location: MarineLocation, feed: MarineFeedConfig, forecastDays: Int = 7) {
         self.location = location
         self.feed = feed
-        self.forecastDays = max(1, min(7, forecastDays))
+        self.forecastDays = max(1, min(Self.maxForecastDays, forecastDays))
     }
 }
 

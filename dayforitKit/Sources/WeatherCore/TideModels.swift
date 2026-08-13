@@ -71,6 +71,7 @@ public struct TideForecast: Codable, Sendable, Equatable {
     public var locationName: String
     public var stationName: String?
     public var stationDistanceKm: Double?
+    public var chartMaximumMeters: Double?
     public var days: [TideDayForecast]
 
     public init(
@@ -79,6 +80,7 @@ public struct TideForecast: Codable, Sendable, Equatable {
         locationName: String,
         stationName: String? = nil,
         stationDistanceKm: Double? = nil,
+        chartMaximumMeters: Double? = nil,
         days: [TideDayForecast]
     ) {
         self.generatedAt = generatedAt
@@ -86,6 +88,7 @@ public struct TideForecast: Codable, Sendable, Equatable {
         self.locationName = locationName
         self.stationName = stationName
         self.stationDistanceKm = stationDistanceKm
+        self.chartMaximumMeters = chartMaximumMeters
         self.days = days
     }
 }

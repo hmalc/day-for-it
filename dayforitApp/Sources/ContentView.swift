@@ -5,73 +5,21 @@ import PleasantnessEngine
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @State private var showSettings = false
-    @State private var selectedTab: TopTab = .summary
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private enum TopTab: String, CaseIterable, Identifiable {
-        case summary = "Summary"
-        case opportunities = "Week"
-        case tides = "Tides"
-
-        var id: String { rawValue }
-    }
-
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Picker("View", selection: $selectedTab) {
-                    ForEach(TopTab.allCases) { tab in
-                        Text(tab.rawValue).tag(tab)
-                    }
+            GeometryReader { geo in
+                ScrollView {
+                    summaryContent(
+                        isSkeleton: !model.hasData && model.isLoading,
+                        availableHeight: geo.size.height
+                    )
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 6)
-
-                if selectedTab == .summary {
-                    GeometryReader { geo in
-                        ScrollView {
-                            summaryContent(
-                                isSkeleton: model.isLoading && model.output == nil,
-                                availableHeight: geo.size.height
-                            )
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .scrollBounceBehavior(.always)
-                        .refreshable { await model.refresh() }
-                    }
-                } else if selectedTab == .opportunities {
-                    GeometryReader { geo in
-                        ScrollView {
-                            OpportunitiesView(availableHeight: geo.size.height)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .scrollBounceBehavior(.always)
-                        .refreshable { await model.refreshOpportunities() }
-                    }
-                } else {
-                    GeometryReader { geo in
-                        ScrollView {
-                            if model.isLoading && model.tideForecast == nil {
-                                TideLoadingView(
-                                    reduceMotion: reduceMotion,
-                                    availableHeight: geo.size.height
-                                )
-                            } else {
-                                ImmersiveTidesView(
-                                    pages: model.tidePageViewData,
-                                    statusMessage: model.tideStatusMessage,
-                                    availableHeight: geo.size.height
-                                )
-                            }
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .scrollBounceBehavior(.always)
-                        .refreshable { await model.refresh() }
-                    }
-                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .scrollBounceBehavior(.always)
+                .refreshable { await model.refresh() }
             }
             .background(DayForItPalette.pageBackground.ignoresSafeArea())
             .tint(DayForItPalette.oceanDeep)
@@ -119,17 +67,18 @@ struct ContentView: View {
             if isSkeleton {
                 ForecastLoadingView(reduceMotion: reduceMotion)
             } else {
-                CompactHeroRecommendationCard(
-                    tone: model.heroOpportunitySummary.tone,
-                    badgeText: model.heroOpportunitySummary.badgeText,
-                    headlineText: model.heroOpportunitySummary.headline,
-                    summaryText: model.decisionSummaryText,
+                GlanceHeroCard(
+                    summary: model.heroOpportunitySummary,
+                    recommendation: model.backendBoatingRecommendation,
+                    marineEvidence: model.marineEvidenceStatus,
+                    generatedHeadline: model.decisionHeadlineText,
+                    generatedSummary: model.decisionSummaryText,
+                    isGeneratingSummary: model.isGeneratingDecisionSummary,
                     windText: model.heroWindText,
                     wavesText: model.heroWavesText,
                     tideText: model.heroTideText,
                     warningText: model.warningBanner,
-                    minHeight: heroCardHeight(availableHeight: availableHeight),
-                    usesRoomyLayout: usesRoomySummaryLayout(availableHeight: availableHeight)
+                    updatedText: model.opportunityUpdatedText ?? model.lastUpdatedText
                 )
 
                 if model.isLoading {
@@ -137,10 +86,10 @@ struct ContentView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
-                FourDayForecastCardsSection(
+                ForecastAndTideSection(
                     pages: model.fourDayDetailPages,
+                    tidePages: model.tidePageViewData,
                     selectedIndex: model.selectedDayIndex,
-                    cardHeight: forecastCardHeight(availableHeight: availableHeight),
                     onSelectDay: { index in
                         withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
                             model.select(dayIndex: index)
@@ -185,7 +134,567 @@ struct ContentView: View {
 
 private enum WeatherSectionLayout {
     static let sectionSpacing: CGFloat = 10
-    static let cornerRadius: CGFloat = 20
+    static let cornerRadius: CGFloat = 18
+    static let tileRadius: CGFloat = 16
+    static let chipRadius: CGFloat = 12
+}
+
+private struct GlanceHeroCard: View {
+    let summary: HeroOpportunitySummary
+    let recommendation: OpportunityRecommendation?
+    let marineEvidence: MarineEvidenceStatus
+    let generatedHeadline: String
+    let generatedSummary: String
+    let isGeneratingSummary: Bool
+    let windText: String
+    let wavesText: String
+    let tideText: String
+    let warningText: String?
+    let updatedText: String?
+
+    var body: some View {
+        let style = BPCalmStyle(rating: displayTone)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 10) {
+                Text(statusText)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(style.tint)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(style.tint.opacity(0.12), in: Capsule())
+                Spacer(minLength: 8)
+                if let updatedText {
+                    Label(updatedText, systemImage: "clock")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(primaryAnswer)
+                    .font(.system(.largeTitle, design: .rounded, weight: .semibold))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.68)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(supportingText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if isGeneratingSummary {
+                    Label("Refining call on device", systemImage: "sparkles")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DayForItPalette.okay)
+                        .transition(.opacity)
+                }
+            }
+
+            HStack(spacing: 8) {
+                GlanceSignalPill(
+                    title: "Sea",
+                    value: marineEvidence.isConfirmed ? wavesText : "Needed",
+                    systemImage: "water.waves",
+                    tint: marineEvidence.isConfirmed ? DayForItPalette.oceanDeep : .secondary,
+                    isStrong: marineEvidence.isConfirmed
+                )
+                GlanceSignalPill(
+                    title: "Wind",
+                    value: windText,
+                    systemImage: "wind",
+                    tint: .secondary,
+                    isStrong: false
+                )
+                GlanceSignalPill(
+                    title: "Tide",
+                    value: tideText,
+                    systemImage: "arrow.up.and.down",
+                    tint: DayForItPalette.calm,
+                    isStrong: false
+                )
+            }
+
+            if let warningText {
+                Label(warningText, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DayForItPalette.caution)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background {
+            RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous)
+                .fill(DayForItPalette.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous)
+                        .strokeBorder(isHighConfidenceCall ? style.tint.opacity(0.22) : DayForItPalette.hairline, lineWidth: 0.8)
+                )
+        }
+        .clipShape(RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous))
+        .shadow(color: DayForItPalette.elevatedShadow.opacity(isHighConfidenceCall ? 1.0 : 0.82), radius: isHighConfidenceCall ? 12 : 8, x: 0, y: isHighConfidenceCall ? 6 : 4)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var isHighConfidenceCall: Bool {
+        marineEvidence.isConfirmed && summary.tone == .green && confidenceRank >= 2
+    }
+
+    private var isWindOnlyWatch: Bool {
+        recommendation?.analysis?.band == "wind_led_watch" || !marineEvidence.isConfirmed
+    }
+
+    private var confidenceRank: Int {
+        switch recommendation?.confidence.lowercased() {
+        case "high": return 3
+        case "medium": return 2
+        case "low": return 1
+        default:
+            return marineEvidence.isConfirmed ? 2 : 1
+        }
+    }
+
+    private var displayTone: BoatDayRating {
+        if isHighConfidenceCall { return .green }
+        if isWindOnlyWatch { return .amber }
+        return summary.tone
+    }
+
+    private var statusText: String {
+        if isHighConfidenceCall {
+            return confidenceRank == 3 ? "WAVE + SWELL" : "WAVE DATA"
+        }
+        if isWindOnlyWatch {
+            return "WIND ONLY"
+        }
+        switch summary.tone {
+        case .green: return "POSSIBLE"
+        case .amber: return "WATCH"
+        case .red: return "HOLD"
+        }
+    }
+
+    private var primaryAnswer: String {
+        if let generated = firstUsefulText([generatedHeadline]) {
+            return generated
+        }
+        if isHighConfidenceCall {
+            return recommendation.map { windowText(for: $0.window) } ?? summary.headline
+        }
+        if isWindOnlyWatch {
+            return recommendation.map { windowText(for: $0.window) } ?? summary.headline
+        }
+        if summary.tone == .red {
+            return "Hold off"
+        }
+        return summary.headline
+    }
+
+    private var supportingText: String {
+        if isHighConfidenceCall {
+            return firstUsefulText([generatedSummary, recommendation?.description]) ?? "Wave height and swell data support this boating window."
+        }
+        if isWindOnlyWatch, let recommendation {
+            return firstUsefulText([generatedSummary]) ?? "\(windowText(for: recommendation.window)) has promising wind, but wait for wave height and swell to confirm."
+        }
+        if isWindOnlyWatch {
+            return firstUsefulText([generatedSummary]) ?? "Wind can hint at a candidate, but this app waits for wave and swell data before calling it."
+        }
+        return firstUsefulText([generatedSummary, summary.subheadline]) ?? summary.subheadline
+    }
+
+    private func windowText(for window: OpportunityRecommendation.Window) -> String {
+        let calendar = Calendar.current
+        let day: String
+        if calendar.isDateInToday(window.start) {
+            day = "Today"
+        } else if calendar.isDateInTomorrow(window.start) {
+            day = "Tomorrow"
+        } else {
+            day = Self.dayFormatter.string(from: window.start)
+        }
+        return "\(day), \(Self.timeText(from: window.start))"
+    }
+
+    private func firstUsefulText(_ values: [String?]) -> String? {
+        values.compactMap { value in
+            let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed?.isEmpty == false ? trimmed : nil
+        }.first
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("EEE")
+        return formatter
+    }()
+
+    private static func timeText(from date: Date) -> String {
+        let minute = Calendar.current.component(.minute, from: date)
+        return (minute == 0 ? hourFormatter : minuteFormatter).string(from: date)
+    }
+
+    private static let hourFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h a"
+        formatter.amSymbol = "am"
+        formatter.pmSymbol = "pm"
+        return formatter
+    }()
+
+    private static let minuteFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        formatter.amSymbol = "am"
+        formatter.pmSymbol = "pm"
+        return formatter
+    }()
+}
+
+private struct GlanceSignalPill: View {
+    let title: String
+    let value: String
+    let systemImage: String
+    let tint: Color
+    let isStrong: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Label(title, systemImage: systemImage)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(tint)
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(isStrong ? .primary : .secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(tint.opacity(isStrong ? 0.10 : 0.05), in: RoundedRectangle(cornerRadius: WeatherSectionLayout.chipRadius, style: .continuous))
+    }
+}
+
+private struct ForecastAndTideSection: View {
+    let pages: [FourDayDetailPage]
+    let tidePages: [TideCardViewData]
+    let selectedIndex: Int
+    let onSelectDay: (Int) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            GlanceForecastSection(
+                pages: pages,
+                selectedIndex: selectedIndex,
+                onSelectDay: onSelectDay
+            )
+
+            TideCard(
+                pages: tidePages,
+                isEmbedded: true,
+                selectedPageIndex: selectedIndex
+            )
+        }
+        .padding(BoatingUITheme.cardPadding)
+        .background(DayForItPalette.cardBackground, in: RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous)
+                .strokeBorder(DayForItPalette.hairline, lineWidth: 0.7)
+        )
+        .shadow(color: DayForItPalette.elevatedShadow.opacity(0.7), radius: 7, x: 0, y: 4)
+    }
+}
+
+private struct GlanceForecastSection: View {
+    let pages: [FourDayDetailPage]
+    let selectedIndex: Int
+    let onSelectDay: (Int) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Best windows")
+                    .font(.headline.weight(.semibold))
+                Spacer()
+                Text(bestWindowSummary)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            if pages.isEmpty {
+                Text("Forecast windows are loading.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(DayForItPalette.insetBackground, in: RoundedRectangle(cornerRadius: WeatherSectionLayout.chipRadius, style: .continuous))
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .bottom, spacing: 6) {
+                            ForEach(pages.prefix(10)) { page in
+                                ForecastGlanceTile(
+                                    page: page,
+                                    isSelected: page.sourceIndex == selectedIndex,
+                                    onTap: { onSelectDay(page.sourceIndex) }
+                                )
+                                .frame(width: 94)
+                            }
+                        }
+                        .scrollTargetLayout()
+                    }
+                    .scrollTargetBehavior(.viewAligned)
+
+                    if let selectedPage {
+                        SelectedForecastDetailCard(page: selectedPage)
+                            .padding(.top, 12)
+                    }
+                }
+            }
+        }
+    }
+
+    private var selectedPage: FourDayDetailPage? {
+        pages.first { $0.sourceIndex == selectedIndex } ?? pages.first
+    }
+
+    private var bestWindowSummary: String {
+        guard let best = pages.max(by: { ($0.scoreValue ?? -1) < ($1.scoreValue ?? -1) }) else {
+            return ""
+        }
+        return best.scoreValue.map { "\(best.dayLabel) \(Int($0.rounded()))" } ?? best.dayLabel
+    }
+}
+
+private struct ForecastGlanceTile: View {
+    let page: FourDayDetailPage
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        let style = BPCalmStyle(rating: page.rating)
+        let confidence = ForecastConfidenceTreatment(text: page.confidenceText)
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Text(compactDay)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .opacity(confidence.textOpacity)
+                    Spacer()
+                    if isHighConfidence {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.caption2)
+                            .foregroundStyle(style.tint)
+                    } else if confidence.isLow {
+                        Image(systemName: "circle.dotted")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .opacity(confidence.textOpacity)
+                    }
+                }
+
+                Text(page.scoreText)
+                    .font(.title3.weight(.bold).monospacedDigit())
+                    .foregroundStyle(style.tint)
+                    .lineLimit(1)
+                    .opacity(confidence.scoreOpacity)
+
+                Text(verdict)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .opacity(confidence.textOpacity)
+
+                Text(page.evidenceText)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .opacity(confidence.textOpacity)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: isSelected ? 102 : 90, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: WeatherSectionLayout.tileRadius, style: .continuous)
+                    .fill(isSelected ? DayForItPalette.cardBackground : DayForItPalette.insetBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: WeatherSectionLayout.tileRadius, style: .continuous)
+                            .fill(style.tint.opacity(tileAccentOpacity))
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: WeatherSectionLayout.tileRadius, style: .continuous)
+                    .strokeBorder(isSelected ? style.tint.opacity(confidence.selectedBorderOpacity) : DayForItPalette.hairline.opacity(confidence.hairlineOpacity), lineWidth: isSelected ? 1.0 : 0.7)
+            )
+        }
+        .buttonStyle(.plain)
+        .opacity(isSelected ? max(confidence.cardOpacity, 0.78) : confidence.cardOpacity)
+        .accessibilityLabel("\(page.dayLabel), \(verdict), score \(page.scoreText), \(page.evidenceText), \(page.confidenceText) confidence")
+    }
+
+    private var compactDay: String {
+        switch page.dayLabel {
+        case "Today": return "Today"
+        case "Tomorrow": return "Tom"
+        default: return String(page.dayLabel.prefix(3))
+        }
+    }
+
+    private var verdict: String {
+        switch page.rating {
+        case .green: return isHighConfidence ? "Day for it" : "Possible"
+        case .amber: return "Watch"
+        case .red: return "Hold"
+        }
+    }
+
+    private var isHighConfidence: Bool {
+        page.rating == .green && page.confidenceText.localizedCaseInsensitiveContains("high")
+    }
+
+    private var tileAccentOpacity: Double {
+        let confidence = ForecastConfidenceTreatment(text: page.confidenceText)
+        if isSelected { return (page.rating == .amber ? 0.07 : 0.055) * confidence.accentMultiplier }
+        if isHighConfidence { return 0.035 }
+        return 0
+    }
+}
+
+private struct ForecastConfidenceTreatment {
+    let text: String
+
+    var isHigh: Bool {
+        text.localizedCaseInsensitiveContains("high")
+    }
+
+    var isLow: Bool {
+        text.localizedCaseInsensitiveContains("low")
+    }
+
+    var cardOpacity: Double {
+        if isHigh { return 1.0 }
+        if isLow { return 0.58 }
+        return 0.82
+    }
+
+    var textOpacity: Double {
+        if isHigh { return 1.0 }
+        if isLow { return 0.62 }
+        return 0.82
+    }
+
+    var scoreOpacity: Double {
+        if isHigh { return 1.0 }
+        if isLow { return 0.68 }
+        return 0.88
+    }
+
+    var accentMultiplier: Double {
+        if isHigh { return 1.0 }
+        if isLow { return 0.38 }
+        return 0.68
+    }
+
+    var selectedBorderOpacity: Double {
+        if isHigh { return 0.32 }
+        if isLow { return 0.14 }
+        return 0.22
+    }
+
+    var hairlineOpacity: Double {
+        isLow ? 0.35 : 1.0
+    }
+
+    var badgeTint: Color {
+        if isHigh { return DayForItPalette.oceanDeep }
+        if isLow { return Color.secondary }
+        return DayForItPalette.sun
+    }
+
+    var badgeBackgroundOpacity: Double {
+        if isHigh { return 0.11 }
+        if isLow { return 0.06 }
+        return 0.09
+    }
+
+    var systemImage: String {
+        if isHigh { return "checkmark.seal.fill" }
+        if isLow { return "circle.dotted" }
+        return "circle.lefthalf.filled"
+    }
+}
+
+private struct SelectedForecastDetailCard: View {
+    let page: FourDayDetailPage
+    @State private var isExpanded = false
+
+    var body: some View {
+        let confidence = ForecastConfidenceTreatment(text: page.confidenceText)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(page.dayLabel)
+                    .font(.headline.weight(.semibold))
+
+                Label(page.evidenceText, systemImage: confidence.systemImage)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(confidence.badgeTint)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(confidence.badgeTint.opacity(confidence.badgeBackgroundOpacity), in: Capsule())
+                    .opacity(confidence.textOpacity)
+
+                Spacer()
+
+                Text(page.warningText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(page.warningText == "No warnings" ? DayForItPalette.calm : DayForItPalette.caution)
+            }
+
+            Text(page.summaryText)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .opacity(max(confidence.textOpacity, 0.72))
+
+            if let contextText = page.contextText {
+                Text(contextText)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+                    .opacity(max(confidence.textOpacity, 0.66))
+            }
+
+            if !page.topDrivers.isEmpty {
+                DisclosureGroup(isExpanded: $isExpanded) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(page.topDrivers.prefix(5).enumerated()), id: \.offset) { _, driver in
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Image(systemName: "circle.fill")
+                                    .font(.system(size: 5))
+                                    .foregroundStyle(.secondary)
+                                Text(driver)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                    .padding(.top, 6)
+                } label: {
+                    Text("Why")
+                        .font(.caption.weight(.semibold))
+                }
+                .tint(DayForItPalette.oceanDeep)
+            }
+        }
+    }
 }
 
 private struct CompactHeroRecommendationCard: View {
@@ -196,6 +705,7 @@ private struct CompactHeroRecommendationCard: View {
     let windText: String
     let wavesText: String
     let tideText: String
+    let marineEvidence: MarineEvidenceStatus
     let warningText: String?
     let minHeight: CGFloat
     let usesRoomyLayout: Bool
@@ -204,7 +714,7 @@ private struct CompactHeroRecommendationCard: View {
         let style = BPCalmStyle(rating: tone)
         VStack(alignment: .leading, spacing: usesRoomyLayout ? 12 : 9) {
             HStack {
-                Label("Ocean outlook", systemImage: "sailboat")
+                Label(marineEvidence.isConfirmed ? "Wave + swell data" : "Wind-only watch", systemImage: marineEvidence.isConfirmed ? "water.waves" : "wind")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(DayForItPalette.oceanDeep.opacity(0.74))
                 Spacer()
@@ -229,18 +739,28 @@ private struct CompactHeroRecommendationCard: View {
                 .minimumScaleFactor(0.82)
                 .fixedSize(horizontal: false, vertical: true)
 
+            MarineEvidenceStrip(status: marineEvidence)
+
             if usesRoomyLayout {
                 Spacer(minLength: 0)
-                HStack(alignment: .top, spacing: 12) {
-                    heroSignal("Wind", value: windText, systemImage: "wind", accent: .secondary)
-                    heroSignal("Waves", value: wavesText, systemImage: "water.waves", accent: DayForItPalette.oceanDeep)
-                    heroSignal("Tide", value: tideText, systemImage: "arrow.up.and.down", accent: DayForItPalette.calm)
+                VStack(alignment: .leading, spacing: 8) {
+                    heroSignal(
+                        "Sea / swell",
+                        value: marineEvidence.isConfirmed ? wavesText : marineEvidence.valueText,
+                        systemImage: "water.waves",
+                        accent: marineEvidence.isConfirmed ? DayForItPalette.oceanDeep : .secondary,
+                        isPrimary: true
+                    )
+                    HStack(alignment: .top, spacing: 12) {
+                        heroSignal("Wind", value: windText, systemImage: "wind", accent: .secondary, isPrimary: false)
+                        heroSignal("Tide", value: tideText, systemImage: "arrow.up.and.down", accent: DayForItPalette.calm, isPrimary: false)
+                    }
                 }
             } else {
                 HStack(spacing: 5) {
-                    Label(windText, systemImage: "wind")
-                    Text("·")
                     Label(wavesText, systemImage: "water.waves")
+                    Text("·")
+                    Label(windText, systemImage: "wind")
                     Text("·")
                     Label(tideText, systemImage: "arrow.up.and.down")
                     if warningText != nil {
@@ -259,7 +779,7 @@ private struct CompactHeroRecommendationCard: View {
         .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
         .background {
             RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                .fill(DayForItPalette.cardBackground)
                 .overlay(
                     DayForItPalette.cardWash(accent: style.tint)
                 )
@@ -277,18 +797,53 @@ private struct CompactHeroRecommendationCard: View {
     }
 
     @ViewBuilder
-    private func heroSignal(_ title: String, value: String, systemImage: String, accent: Color) -> some View {
+    private func heroSignal(_ title: String, value: String, systemImage: String, accent: Color, isPrimary: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Label(title, systemImage: systemImage)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(accent)
             Text(value)
-                .font(.caption.weight(.semibold))
+                .font(isPrimary ? .subheadline.weight(.semibold) : .caption.weight(.semibold))
                 .foregroundStyle(.primary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.82)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
+private struct MarineEvidenceStrip: View {
+    let status: MarineEvidenceStatus
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: status.isConfirmed ? "checkmark.seal.fill" : "scope")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 18, height: 18)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(status.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(status.detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(tint.opacity(status.isConfirmed ? 0.10 : 0.07), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .strokeBorder(tint.opacity(status.isConfirmed ? 0.18 : 0.10), lineWidth: 0.7)
+        )
+    }
+
+    private var tint: Color {
+        status.isConfirmed ? DayForItPalette.oceanDeep : DayForItPalette.okay
     }
 }
 
@@ -359,7 +914,7 @@ private struct FourDayForecastCardsSection: View {
     }
 
     private var sectionTitle: String {
-        if pages.count >= 4 { return "Next 4 days" }
+        if pages.count >= 7 { return "Next 7 days" }
         if pages.count == 1 { return "Next forecast day" }
         return "Next \(pages.count) forecast days"
     }
@@ -388,7 +943,7 @@ private struct FourDayScoreSelector: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            ForEach(Array(pages.prefix(4)), id: \.id) { page in
+            ForEach(Array(pages.prefix(7)), id: \.id) { page in
                 Button {
                     onSelectDay(page.sourceIndex)
                 } label: {
@@ -467,9 +1022,13 @@ private struct ForecastDayCard: View {
                 .lineLimit(isRoomy ? 3 : 2)
                 .fixedSize(horizontal: false, vertical: true)
 
+            if isRoomy {
+                ForecastSeaEvidencePill(evidence: seaEvidence)
+            }
+
             HStack(spacing: 6) {
                 ForecastInfoPill(title: "Rating", value: page.rating.label, tint: tint)
-                ForecastInfoPill(title: "Confidence", value: page.confidenceText, tint: .secondary)
+                ForecastInfoPill(title: "Evidence", value: page.evidenceText, tint: .secondary)
             }
 
             if isRoomy, let contextText = page.contextText {
@@ -526,7 +1085,7 @@ private struct ForecastDayCard: View {
         .frame(height: cardHeight, alignment: .topLeading)
         .background {
             RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                .fill(DayForItPalette.cardBackground)
                 .overlay(
                     DayForItPalette.cardWash(accent: tint)
                 )
@@ -549,6 +1108,29 @@ private struct ForecastDayCard: View {
         page.topDrivers.map {
             ForecastDriverRow(text: $0, tone: driverTone(for: $0))
         }
+    }
+
+    private var seaEvidence: ForecastSeaEvidence {
+        let seaDriver = page.topDrivers.first { line in
+            let lower = line.lowercased()
+            let hasSeaWord = lower.contains("sea") || lower.contains("swell") || lower.contains("wave")
+            let isWindEstimate = lower.contains("estimated from wind") || lower.contains("wind proxy")
+            return hasSeaWord && !isWindEstimate
+        }
+
+        if let seaDriver {
+            return ForecastSeaEvidence(
+                title: "Sea/swell signal",
+                detail: seaDriver,
+                isConfirmed: true
+            )
+        }
+
+        return ForecastSeaEvidence(
+            title: "Wind trend only",
+            detail: "Treat this as a candidate until wave height and swell data confirm.",
+            isConfirmed: false
+        )
     }
 
     private func driverTone(for text: String) -> ForecastDriverTone {
@@ -579,6 +1161,42 @@ private struct ForecastDayCard: View {
 private struct ForecastDriverRow {
     let text: String
     let tone: ForecastDriverTone
+}
+
+private struct ForecastSeaEvidence {
+    let title: String
+    let detail: String
+    let isConfirmed: Bool
+}
+
+private struct ForecastSeaEvidencePill: View {
+    let evidence: ForecastSeaEvidence
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: evidence.isConfirmed ? "water.waves" : "wind")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(tint)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(evidence.title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(evidence.detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+            }
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(tint.opacity(evidence.isConfirmed ? 0.09 : 0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var tint: Color {
+        evidence.isConfirmed ? DayForItPalette.oceanDeep : DayForItPalette.okay
+    }
 }
 
 private enum ForecastDriverTone {
@@ -699,12 +1317,12 @@ private struct ForecastLoadingView: View {
                 BPLoadingBlock(width: 260, height: 12, cornerRadius: 6, reduceMotion: reduceMotion)
             }
             .padding(12)
-            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous))
+            .background(DayForItPalette.cardBackground, in: RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous))
 
             VStack(alignment: .leading, spacing: 10) {
                 BPLoadingBlock(width: 104, height: 18, cornerRadius: 6, reduceMotion: reduceMotion)
                 HStack(spacing: 6) {
-                    ForEach(0 ..< 4, id: \.self) { _ in
+                    ForEach(0 ..< 7, id: \.self) { _ in
                         BPLoadingBlock(height: 44, cornerRadius: 12, reduceMotion: reduceMotion)
                     }
                 }
@@ -785,7 +1403,7 @@ private struct BPLoadingBlock: View {
             .frame(width: width, height: height)
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.6)
+                    .strokeBorder(DayForItPalette.hairline, lineWidth: 0.6)
             )
             .modifier(ShimmerModifier(isDisabled: reduceMotion))
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
@@ -802,7 +1420,7 @@ private struct ShimmerModifier: ViewModifier {
                 if !isDisabled {
                     GeometryReader { geo in
                         LinearGradient(
-                            colors: [.clear, .white.opacity(0.35), .clear],
+                            colors: [.clear, DayForItPalette.shimmerHighlight, .clear],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -848,7 +1466,7 @@ private struct RefinedKeyDriversSection: View {
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                            .fill(DayForItPalette.cardBackground)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                                     .fill(DayForItPalette.sky.opacity(0.08))
@@ -994,7 +1612,7 @@ private struct ImmersiveTidesView: View {
                 } label: {
                     Text(page.dayLabel)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(page.id == currentPage.id ? Color.white : Color.primary)
+                        .foregroundStyle(page.id == currentPage.id ? DayForItPalette.onAccent : Color.primary)
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, minHeight: 34)
                         .background(
@@ -1120,11 +1738,11 @@ private struct InteractiveTideCurveView: View {
             let width = geo.size.width
             let height = geo.size.height
             let samples = samplePoints
-            let minH = samples.map(\.heightMeters).min() ?? 0
-            let maxH = samples.map(\.heightMeters).max() ?? 1
+            let minH = 0.0
+            let maxH = max(1.0, viewData.chartMaximumMeters)
             let span = max(0.001, maxH - minH)
             let now = Date()
-            let showsNow = now >= viewData.axisStart && now <= viewData.axisEnd
+            let showsNow = now >= viewData.axisStart && now < viewData.axisEnd
             let nowX = xPosition(for: now, width: width)
 
             ZStack {
@@ -1136,6 +1754,24 @@ private struct InteractiveTideCurveView: View {
                     }
                     .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                 }
+
+                ForEach([0.0, 0.5, 1.0], id: \.self) { progress in
+                    let y = height - CGFloat(progress) * (height - 10) - 5
+                    Path { path in
+                        path.move(to: CGPoint(x: 0, y: y))
+                        path.addLine(to: CGPoint(x: width, y: y))
+                    }
+                    .stroke(Color.primary.opacity(progress == 0 ? 0.12 : 0.07), lineWidth: 1)
+                }
+
+                VStack(alignment: .trailing) {
+                    Text(String(format: "%.1fm", maxH))
+                    Spacer()
+                    Text("0m")
+                }
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Color.secondary.opacity(0.82))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
 
                 if samples.count >= 2 {
                     Path { path in
@@ -1159,7 +1795,7 @@ private struct InteractiveTideCurveView: View {
                     }
                     .fill(DayForItPalette.ocean.opacity(0.08))
 
-                    ForEach(viewData.events) { event in
+                    ForEach(eventsInWindow) { event in
                         if let h = event.heightMeters {
                             let x = xPosition(for: event.time, width: width)
                             let y = yPosition(for: h, min: minH, span: span, height: height)
@@ -1170,7 +1806,7 @@ private struct InteractiveTideCurveView: View {
                                 .position(x: x, y: y)
 
                             VStack(spacing: 0) {
-                                Text(Self.annotationTimeFormatter.string(from: event.time))
+                                Text("\(event.kind == .high ? "High" : "Low") \(Self.annotationTimeFormatter.string(from: event.time))")
                                     .font(.caption2.weight(.medium))
                                 Text(String(format: "%.2f m", h))
                                     .font(.caption.weight(.semibold))
@@ -1188,22 +1824,13 @@ private struct InteractiveTideCurveView: View {
                         }
                     }
 
-                    if probeX == nil, showsNow, let nowProbe = probeAt(x: nowX, width: width, points: samples) {
-                        Path { path in
-                            path.move(to: CGPoint(x: nowX, y: 0))
-                            path.addLine(to: CGPoint(x: nowX, y: height))
-                        }
-                        .stroke(DayForItPalette.oceanDeep.opacity(0.34), lineWidth: 1)
-
-                        if let h = nowProbe.heightMeters {
-                            Circle()
-                                .fill(DayForItPalette.oceanDeep)
-                                .frame(width: 8, height: 8)
-                                .position(
-                                    x: nowX,
-                                    y: yPosition(for: h, min: minH, span: span, height: height)
-                                )
-                        }
+                    if probeX == nil, showsNow, let nowProbe = probeAt(x: nowX, width: width, points: samples), let nowHeight = nowProbe.heightMeters {
+                        TideNowMarker(
+                            x: nowX,
+                            y: yPosition(for: nowHeight, min: minH, span: span, height: height),
+                            chartWidth: width,
+                            chartHeight: height
+                        )
                     }
 
                     if let probeX {
@@ -1249,6 +1876,12 @@ private struct InteractiveTideCurveView: View {
         }
     }
 
+    private var eventsInWindow: [TideEventViewPoint] {
+        viewData.events
+            .filter { $0.time >= viewData.axisStart && $0.time < viewData.axisEnd }
+            .sorted { $0.time < $1.time }
+    }
+
     private func xPosition(for time: Date, width: CGFloat) -> CGFloat {
         let start = viewData.axisStart.timeIntervalSinceReferenceDate
         let end = viewData.axisEnd.timeIntervalSinceReferenceDate
@@ -1258,7 +1891,7 @@ private struct InteractiveTideCurveView: View {
     }
 
     private func yPosition(for heightValue: Double, min: Double, span: Double, height: CGFloat) -> CGFloat {
-        let normalized = (heightValue - min) / span
+        let normalized = Swift.min(Swift.max((heightValue - min) / span, 0), 1)
         return (1 - CGFloat(normalized)) * (height - 10) + 5
     }
 
@@ -1319,7 +1952,7 @@ private struct BPDetailedConditionsCard: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                .fill(DayForItPalette.cardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(DayForItPalette.sky.opacity(0.08))
@@ -1355,7 +1988,7 @@ private struct BPSourceInfoCard: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.60))
+                .fill(DayForItPalette.cardBackground.opacity(0.60))
                 .overlay(
                     RoundedRectangle(cornerRadius: WeatherSectionLayout.cornerRadius, style: .continuous)
                         .fill(DayForItPalette.sky.opacity(0.10))

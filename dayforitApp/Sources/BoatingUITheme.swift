@@ -8,48 +8,85 @@ enum BoatingUITheme {
     static let cardPadding: CGFloat = 16
     static let heroPadding: CGFloat = 20
 
-    static let heroRadius: CGFloat = 28
-    static let metricRadius: CGFloat = 22
-    static let sectionRadius: CGFloat = 24
+    static let heroRadius: CGFloat = 20
+    static let metricRadius: CGFloat = 16
+    static let sectionRadius: CGFloat = 18
 }
 
 enum DayForItPalette {
-    static let sky = Color(red: 0.54, green: 0.87, blue: 0.94)
-    static let skyDeep = Color(red: 0.22, green: 0.72, blue: 0.88)
-    static let ocean = Color(red: 0.09, green: 0.62, blue: 0.76)
-    static let oceanDeep = Color(red: 0.04, green: 0.47, blue: 0.64)
-    static let sun = Color(red: 1.00, green: 0.86, blue: 0.50)
-    static let ink = Color(red: 0.04, green: 0.22, blue: 0.27)
-    static let appBackground = Color(red: 0.95, green: 0.985, blue: 0.99)
+    static let sky = adaptiveColor(
+        light: (0.73, 0.88, 1.00),
+        dark: (0.20, 0.38, 0.55)
+    )
+    static let skyDeep = adaptiveColor(
+        light: (0.12, 0.45, 0.92),
+        dark: (0.28, 0.62, 1.00)
+    )
+    static let ocean = adaptiveColor(
+        light: (0.17, 0.52, 0.82),
+        dark: (0.20, 0.58, 0.88)
+    )
+    static let oceanDeep = adaptiveColor(
+        light: (0.08, 0.36, 0.62),
+        dark: (0.20, 0.56, 0.92)
+    )
+    static let sun = adaptiveColor(
+        light: (0.92, 0.46, 0.08),
+        dark: (1.00, 0.64, 0.25)
+    )
+    static let ink = Color.primary
+    static let appBackground = Color(uiColor: .systemGroupedBackground)
+    static let cardBackground = Color(uiColor: .secondarySystemGroupedBackground)
+    static let insetBackground = Color(uiColor: .tertiarySystemGroupedBackground)
+    static let hairline = Color.primary.opacity(0.08)
+    static let onAccent = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark ? .black : .white
+    })
+    static let elevatedShadow = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.black.withAlphaComponent(0.22)
+            : UIColor.black.withAlphaComponent(0.055)
+    })
+    static let shimmerHighlight = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.white.withAlphaComponent(0.16)
+            : UIColor.white.withAlphaComponent(0.42)
+    })
 
-    static let calm = Color(red: 0.20, green: 0.64, blue: 0.82)
-    static let okay = Color(red: 0.38, green: 0.62, blue: 0.74)
-    static let caution = Color(red: 0.58, green: 0.64, blue: 0.68)
-    static let hold = Color(red: 0.34, green: 0.40, blue: 0.45)
+    static let calm = skyDeep
+    static let okay = sun
+    static let caution = Color(uiColor: .systemOrange)
+    static let hold = Color(uiColor: .systemRed)
 
-    static var pageBackground: LinearGradient {
+    static var pageBackground: Color {
+        appBackground
+    }
+
+    static func cardWash(accent: Color) -> LinearGradient {
         LinearGradient(
             colors: [
-                appBackground,
-                sky.opacity(0.18),
-                Color(uiColor: .systemGroupedBackground)
+                .clear,
+                accent.opacity(0.035),
+                .clear
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
     }
 
-    static func cardWash(accent: Color) -> LinearGradient {
-        LinearGradient(
-            colors: [
-                sky.opacity(0.12),
-                sun.opacity(0.035),
-                accent.opacity(0.07),
-                .clear
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+    private static func adaptiveColor(
+        light: (Double, Double, Double),
+        dark: (Double, Double, Double)
+    ) -> Color {
+        Color(uiColor: UIColor { traits in
+            let values = traits.userInterfaceStyle == .dark ? dark : light
+            return UIColor(
+                red: CGFloat(values.0),
+                green: CGFloat(values.1),
+                blue: CGFloat(values.2),
+                alpha: 1
+            )
+        })
     }
 }
 
@@ -88,28 +125,23 @@ struct CardSurfaceModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         switch surface {
-        case let .hero(style):
+        case .hero:
             content
                 .background(
                     RoundedRectangle(cornerRadius: BoatingUITheme.heroRadius, style: .continuous)
-                        .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                        .fill(DayForItPalette.cardBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: BoatingUITheme.heroRadius, style: .continuous)
-                                .fill(DayForItPalette.cardWash(accent: style.tint))
+                                .strokeBorder(DayForItPalette.hairline, lineWidth: 0.7)
                         )
-                        .overlay(alignment: .top) {
-                            RoundedRectangle(cornerRadius: BoatingUITheme.heroRadius, style: .continuous)
-                                .strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
-                                .mask(Rectangle().frame(height: 80))
-                        }
                 )
-                .shadow(color: style.tint.opacity(0.08), radius: 7, x: 0, y: 3)
+                .shadow(color: DayForItPalette.elevatedShadow, radius: 8, x: 0, y: 4)
         case .metric:
             content
-                .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: BoatingUITheme.metricRadius, style: .continuous))
+                .background(DayForItPalette.cardBackground, in: RoundedRectangle(cornerRadius: BoatingUITheme.metricRadius, style: .continuous))
         case .section:
             content
-                .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: BoatingUITheme.sectionRadius, style: .continuous))
+                .background(DayForItPalette.cardBackground, in: RoundedRectangle(cornerRadius: BoatingUITheme.sectionRadius, style: .continuous))
         }
     }
 }

@@ -4,6 +4,10 @@ import SwiftUI
 import PleasantnessEngine
 import WeatherCore
 
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
+
 struct DriverMetric: Identifiable {
     let id = UUID()
     let symbol: String
@@ -70,6 +74,7 @@ struct TideCardViewData: Identifiable {
     let series: TideSeriesSource
     let axisStart: Date
     let axisEnd: Date
+    let chartMaximumMeters: Double
     let note: String?
 }
 
@@ -93,6 +98,7 @@ struct FourDayDetailPage: Identifiable {
     let scoreText: String
     let summaryText: String
     let confidenceText: String
+    let evidenceText: String
     let contextText: String?
     let warningText: String
     let topDrivers: [String]
@@ -107,6 +113,186 @@ struct HeroOpportunitySummary {
     let focusDrivers: [String]
 }
 
+struct MarineEvidenceStatus {
+    let title: String
+    let detail: String
+    let valueText: String
+    let isConfirmed: Bool
+}
+
+struct DecisionCopy: Sendable, Equatable {
+    let headline: String?
+    let summary: String?
+}
+
+struct DecisionSummaryContext: Sendable, Equatable {
+    let locationName: String
+    let headline: String
+    let fallbackSummary: String
+    let windowText: String?
+    let scoreText: String?
+    let decisionLabel: String?
+    let verdict: String?
+    let marineEvidenceTitle: String
+    let marineEvidenceDetail: String
+    let windText: String
+    let wavesText: String
+    let tideText: String
+    let tideEvents: [String]
+    let warningText: String?
+    let confidence: String?
+    let priority: String?
+    let reasons: [String]
+    let riskFlags: [String]
+    let dataSignals: [String]
+    let sourceStatus: [String]
+    let forecastDays: [String]
+    let topDrivers: [String]
+}
+
+struct DecisionSummaryGenerator {
+    func generate(context: DecisionSummaryContext) async -> DecisionCopy? {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, macOS 26.0, visionOS 26.0, *) {
+            let model = SystemLanguageModel.default
+            guard model.isAvailable else { return nil }
+
+            let session = LanguageModelSession(
+                model: model,
+                instructions: """
+                You write tiny boating guidance copy for Day For It.
+                Use only the supplied facts. Do not invent conditions.
+                Be conservative: boating is never guaranteed safe.
+                The headline is the main glanceable answer.
+                The summary is one calm sentence under 30 words.
+                If wave height or swell data is not available, say so clearly.
+                Use "Day for it" only when wave height or swell forecast data confirms the call.
+                Include useful tide timing when tide highs and lows are supplied.
+                Do not mention being an AI, scores, JSON, or internal models.
+                Return exactly two lines:
+                Headline: <short headline>
+                Summary: <short summary>
+                """
+            )
+
+            let response = try? await session.respond(
+                to: prompt(for: context),
+                options: GenerationOptions(
+                    sampling: .greedy,
+                    temperature: 0.2,
+                    maximumResponseTokens: 70
+                )
+            )
+
+            return Self.parseCopy(response?.content)
+        }
+        #endif
+
+        return nil
+    }
+
+    private func prompt(for context: DecisionSummaryContext) -> String {
+        var lines = [
+            "Location: \(context.locationName)",
+            "Fallback headline: \(context.headline)",
+            "Fallback summary: \(context.fallbackSummary)",
+            "Wave/swell evidence: \(context.marineEvidenceTitle). \(context.marineEvidenceDetail)",
+            "Wind: \(context.windText)",
+            "Sea/waves: \(context.wavesText)",
+            "Tide: \(context.tideText)"
+        ]
+
+        if let windowText = context.windowText {
+            lines.append("Best window: \(windowText)")
+        }
+        if let scoreText = context.scoreText {
+            lines.append("Score: \(scoreText)")
+        }
+        if let decisionLabel = context.decisionLabel {
+            lines.append("Decision label: \(decisionLabel)")
+        }
+        if let verdict = context.verdict {
+            lines.append("Verdict: \(verdict)")
+        }
+        if let confidence = context.confidence {
+            lines.append("Confidence: \(confidence)")
+        }
+        if let priority = context.priority {
+            lines.append("Priority: \(priority)")
+        }
+        if let warningText = context.warningText {
+            lines.append("Warning: \(warningText)")
+        }
+        if !context.tideEvents.isEmpty {
+            lines.append("All tide events: \(context.tideEvents.prefix(6).joined(separator: " | "))")
+        }
+        if !context.reasons.isEmpty {
+            lines.append("Reasons: \(context.reasons.prefix(5).joined(separator: " | "))")
+        }
+        if !context.riskFlags.isEmpty {
+            lines.append("Risk flags: \(context.riskFlags.prefix(4).joined(separator: " | "))")
+        }
+        if !context.dataSignals.isEmpty {
+            lines.append("Provider signals: \(context.dataSignals.prefix(6).joined(separator: " | "))")
+        }
+        if !context.sourceStatus.isEmpty {
+            lines.append("Source status: \(context.sourceStatus.prefix(5).joined(separator: " | "))")
+        }
+        if !context.forecastDays.isEmpty {
+            lines.append("Forecast days: \(context.forecastDays.prefix(7).joined(separator: " | "))")
+        }
+        if !context.topDrivers.isEmpty {
+            lines.append("Drivers: \(context.topDrivers.prefix(6).joined(separator: " | "))")
+        }
+
+        lines.append("Write the two output lines now.")
+        return lines.joined(separator: "\n")
+    }
+
+    static func parseCopy(_ value: String?) -> DecisionCopy? {
+        guard let value else { return nil }
+        var headline: String?
+        var summary: String?
+
+        for rawLine in value.components(separatedBy: .newlines) {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            let lower = line.lowercased()
+            if lower.hasPrefix("headline:") {
+                headline = cleanedLine(String(line.dropFirst("headline:".count)), maxCharacters: 42)
+            } else if lower.hasPrefix("summary:") {
+                summary = cleanedLine(String(line.dropFirst("summary:".count)), maxCharacters: 170)
+            }
+        }
+
+        if headline == nil, summary == nil {
+            summary = cleanedLine(value, maxCharacters: 170)
+        }
+
+        guard headline != nil || summary != nil else { return nil }
+        return DecisionCopy(headline: headline, summary: summary)
+    }
+
+    private static func cleanedLine(_ value: String?, maxCharacters: Int) -> String? {
+        guard var text = value?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+            return nil
+        }
+
+        text = text
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: #"^["“]|["”]$"#, with: "", options: .regularExpression)
+
+        while text.contains("  ") {
+            text = text.replacingOccurrences(of: "  ", with: " ")
+        }
+
+        if text.count > maxCharacters {
+            text = String(text.prefix(maxCharacters)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return text.isEmpty ? nil : text
+    }
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var isLoading = false
@@ -114,7 +300,7 @@ final class AppModel: ObservableObject {
     @Published var selectedDayIndex = 0
     @Published var output: MarineForecastOutput?
     @Published var warningBanner: String?
-    @Published var disclaimer = "For planning only. Uses Bureau marine data Australia-wide where configured, with Queensland Government tide and wave data where available."
+    @Published var disclaimer = "For planning only. Uses Bureau marine data Australia-wide where configured, Queensland Government tide and wave data where available, and backend boating-window analysis as a secondary planning signal."
     @Published var savedOverride: StoredLocation?
     @Published var tideForecast: TideForecast?
     @Published var tideStatusMessage: String?
@@ -123,33 +309,55 @@ final class AppModel: ObservableObject {
     @Published var opportunityRecommendations: [OpportunityRecommendation] = []
     @Published var opportunityAttribution: String?
     @Published var opportunityFetchedAt: Date?
-    @Published var selectedOpportunityInterestIDs = Set(OpportunityActivity.all.map(\.id))
+    @Published var selectedOpportunityInterestIDs = Set(OpportunityActivity.clientAnchorIDs)
     @Published var opportunityFeedback: [String: String] = [:]
+    @Published private(set) var llmDecisionHeadline: String?
+    @Published private(set) var llmDecisionSummary: String?
+    @Published private(set) var isGeneratingDecisionSummary = false
+    @Published var highConfidenceBoatingAlertsEnabled: Bool
+    @Published private(set) var boatingAlertAuthorizationText = "Checking"
+    @Published private(set) var boatingAlertLastCheckText: String?
+    @Published private(set) var boatingAlertLastResultText: String?
 
     let locationManager: LocationManager
 
     private let forecastService: MarineForecastService
     private let opportunityClient: OpportunityClientProtocol
+    private let decisionSummaryGenerator: DecisionSummaryGenerator
     private let opportunityClientIDStore: OpportunityClientIDStore
+    private let boatingAlertService: BoatingAlertService
     private let locationStore: LocationStore
     private let tideProvider: TideDataProvider
     private let tideStore: TideStore
     private var pendingCurrentLocationSelection = false
     private var refreshGeneration = 0
     private var opportunityRefreshGeneration = 0
+    private var decisionSummaryGeneration = 0
 
     init(
         locationManager: LocationManager = .init(),
         forecastService: MarineForecastService = .init(),
         opportunityClient: OpportunityClientProtocol = OpportunityClient(),
+        decisionSummaryGenerator: DecisionSummaryGenerator = .init(),
         opportunityClientIDStore: OpportunityClientIDStore = .init(),
+        boatingAlertService: BoatingAlertService? = nil,
         locationStore: LocationStore = .init(),
         tideProvider: TideDataProvider = QueenslandTideDataProvider()
     ) {
         self.locationManager = locationManager
         self.forecastService = forecastService
         self.opportunityClient = opportunityClient
+        self.decisionSummaryGenerator = decisionSummaryGenerator
         self.opportunityClientIDStore = opportunityClientIDStore
+        let resolvedAlertService = boatingAlertService ?? BoatingAlertService(
+            opportunityClient: opportunityClient,
+            clientIDStore: opportunityClientIDStore
+        )
+        self.boatingAlertService = resolvedAlertService
+        self.highConfidenceBoatingAlertsEnabled = resolvedAlertService.alertsEnabled
+        self.boatingAlertLastCheckText = resolvedAlertService.lastCheckDate.map {
+            Self.relativeDateFormatter.localizedString(for: $0, relativeTo: Date())
+        }
         self.locationStore = locationStore
         self.tideProvider = tideProvider
         self.tideStore = .init()
@@ -191,14 +399,18 @@ final class AppModel: ObservableObject {
 
     private var forecastDisplayWindow: [(sourceIndex: Int, day: DailyMarineSummary)] {
         let indexedDays = Array(displayDays.enumerated()).map { (sourceIndex: $0.offset, day: $0.element) }
-        let firstFour = Array(indexedDays.prefix(4))
-        let available = firstFour.filter { item in
+        let displayHorizon = Array(indexedDays.prefix(Self.localForecastDisplayDays))
+        let available = displayHorizon.filter { item in
             item.day.availability == .available || item.day.pleasantness != nil
         }
-        return available.isEmpty ? firstFour : available
+        return available.isEmpty ? displayHorizon : available
     }
 
     var heroOpportunitySummary: HeroOpportunitySummary {
+        if let recommendation = backendBoatingRecommendation {
+            return backendHeroOpportunitySummary(for: recommendation)
+        }
+
         let window = fourDayWindow
         guard !window.isEmpty else {
             return HeroOpportunitySummary(
@@ -315,8 +527,23 @@ final class AppModel: ObservableObject {
         opportunityRecommendations.first
     }
 
+    var backendBoatingRecommendation: OpportunityRecommendation? {
+        opportunityRecommendation(for: "boating")
+    }
+
+    func opportunityRecommendation(for activityID: String) -> OpportunityRecommendation? {
+        opportunityRecommendations.first { $0.activity == activityID }
+    }
+
     var heroSupportingText: String {
         heroOpportunitySummary.subheadline
+    }
+
+    var decisionHeadlineText: String {
+        if let llm = llmDecisionHeadline?.trimmingCharacters(in: .whitespacesAndNewlines), !llm.isEmpty {
+            return llm
+        }
+        return heroOpportunitySummary.headline
     }
 
     var decisionSummaryText: String {
@@ -331,17 +558,43 @@ final class AppModel: ObservableObject {
     }
 
     var heroWavesText: String {
-        conciseDriverValue(in: heroFocusDrivers, keyword: "swell", alternateKeywords: ["sea", "wave"], fallback: "Low")
+        if let recommendation = backendBoatingRecommendation, !recommendationHasKnownSeaData(recommendation) {
+            return "Not confirmed"
+        }
+        return conciseDriverValue(in: heroFocusDrivers, keyword: "swell", alternateKeywords: ["sea", "wave"], fallback: "Low")
     }
 
     var heroTideText: String {
         conciseDriverValue(in: heroFocusDrivers, keyword: "tide", fallback: "No tide signal")
     }
 
+    var marineEvidenceStatus: MarineEvidenceStatus {
+        if let recommendation = backendBoatingRecommendation {
+            return marineEvidenceStatus(for: recommendation)
+        }
+
+        if let detail = localKnownSeaDetail() {
+            return MarineEvidenceStatus(
+                title: "Wave + swell data",
+                detail: detail,
+                valueText: heroWavesText,
+                isConfirmed: true
+            )
+        }
+
+        return MarineEvidenceStatus(
+            title: "Wave/swell missing",
+            detail: "Wind can flag a possible window, but the call needs wave height and swell data.",
+            valueText: "Awaiting waves",
+            isConfirmed: false
+        )
+    }
+
     var keyDriverMetrics: [DriverMetric] {
-        [
-            DriverMetric(symbol: "wind", label: "Wind", value: heroWindText, detail: "Primary comfort and handling factor", accent: nil),
-            DriverMetric(symbol: "water.waves", label: "Waves", value: heroWavesText, detail: "Sea state impact on ride quality", accent: DayForItPalette.oceanDeep.opacity(0.7)),
+        let evidence = marineEvidenceStatus
+        return [
+            DriverMetric(symbol: "water.waves", label: "Sea / swell", value: evidence.valueText, detail: evidence.isConfirmed ? "Primary ride-quality signal" : "Required before a strong call", accent: DayForItPalette.oceanDeep.opacity(0.7)),
+            DriverMetric(symbol: "wind", label: "Wind", value: heroWindText, detail: evidence.isConfirmed ? "Supplementary trend signal" : "Forward-looking candidate signal", accent: nil),
             DriverMetric(symbol: "arrow.up.and.down", label: "Tide", value: heroTideText, detail: "Windowing support for launch/return", accent: DayForItPalette.okay.opacity(0.7)),
             DriverMetric(symbol: "exclamationmark.triangle.fill", label: "Warnings", value: warningBanner == nil ? "None" : "Active", detail: warningBanner == nil ? "No active marine warnings" : "Watch timing and route choices", accent: warningBanner == nil ? nil : DayForItPalette.hold.opacity(0.8)),
         ]
@@ -355,7 +608,7 @@ final class AppModel: ObservableObject {
         if let best = fourDayOutlook.first(where: { $0.isBest }) {
             items.append(NextChangeItem(symbol: "sparkles", title: "Cleanest window", detail: best.dayLabel == "Today" ? "Today is currently the cleanest ocean window." : "\(best.dayLabel) is currently the cleanest ocean window."))
         }
-        items.append(NextChangeItem(symbol: "wind", title: "Trend watch", detail: "Re-check before departure for updates in wind and warnings."))
+        items.append(NextChangeItem(symbol: "wind", title: "Trend watch", detail: "Wind can flag candidates; wave height and swell need to confirm the call."))
         if let tide = extractDriver(keyword: "tide") {
             items.append(NextChangeItem(symbol: "arrow.up.and.down", title: "Tide update", detail: tide))
         }
@@ -366,18 +619,16 @@ final class AppModel: ObservableObject {
     }
 
     var tideEvents: [String] {
-        let tide = tideCardViewData
-        return [
-            tide.nextHigh.map { "High \(Self.timeFormatter.string(from: $0.time))" } ?? "High --",
-            tide.nextLow.map { "Low \(Self.timeFormatter.string(from: $0.time))" } ?? "Low --",
-            tide.note ?? "Tide series unavailable",
-        ]
+        let events = tideEventsInDisplayWindow(for: tideCardViewData)
+            .map(tideEventSummary)
+        return events.isEmpty ? ["Tide series unavailable"] : events
     }
 
     var detailedRows: [ConditionRow] {
         var rows = [
-            ConditionRow(label: "Wind", value: extractDriver(keyword: "wind") ?? heroWindText),
+            ConditionRow(label: "Sea data", value: "\(marineEvidenceStatus.title): \(marineEvidenceStatus.detail)"),
             ConditionRow(label: "Waves / Swell", value: extractDriver(keyword: "swell") ?? extractDriver(keyword: "wave") ?? heroWavesText),
+            ConditionRow(label: "Wind", value: extractDriver(keyword: "wind") ?? heroWindText),
             ConditionRow(label: "Tide basis", value: tideCardViewData.note ?? heroTideText),
             ConditionRow(label: "Rating", value: selectedDaySummary?.rating.label ?? "Unknown"),
         ]
@@ -418,6 +669,7 @@ final class AppModel: ObservableObject {
             let drivers = visibleDriverTexts(from: day.topDrivers)
             let summaryText = conciseReason(from: drivers) ?? "Forecast details unavailable"
             let confidenceText = day.confidence.capitalized
+            let evidenceText = forecastEvidenceLabel(for: day)
             let contextText = forecastContextText(for: day, isBest: isBest)
             let warningText = day.warningLimited ? "Warning active" : "No warnings"
             return FourDayDetailPage(
@@ -429,6 +681,7 @@ final class AppModel: ObservableObject {
                 scoreText: scoreText,
                 summaryText: summaryText,
                 confidenceText: confidenceText,
+                evidenceText: evidenceText,
                 contextText: contextText,
                 warningText: warningText,
                 topDrivers: drivers,
@@ -458,7 +711,7 @@ final class AppModel: ObservableObject {
             return output.daily
         }
         let today = Calendar.current.startOfDay(for: Date())
-        return (0 ..< 7).compactMap { offset in
+        return (0 ..< Self.localForecastDisplayDays).compactMap { offset in
             guard let date = Calendar.current.date(byAdding: .day, value: offset, to: today) else { return nil }
             return DailyMarineSummary(
                 dayStart: date,
@@ -474,23 +727,59 @@ final class AppModel: ObservableObject {
 
     func startup() {
         // Default to Cowley Beach unless user explicitly sets an override.
-        Task { await refreshFullData(clearsExistingData: false, allowsCachedTideFallback: true) }
+        Task { await refreshHomeData(clearsExistingData: false, allowsCachedTideFallback: true, forcesNetworkReload: false) }
+        Task { await prepareBoatingAlertsForStartup() }
     }
 
     func refresh() async {
-        await refreshFullData(clearsExistingData: true, allowsCachedTideFallback: false)
+        await refreshHomeData(
+            clearsExistingData: true,
+            allowsCachedTideFallback: false,
+            forcesNetworkReload: true,
+            preservesOpportunityState: true
+        )
+    }
+
+    func refreshHome() async {
+        await refreshHomeData(
+            clearsExistingData: true,
+            allowsCachedTideFallback: false,
+            forcesNetworkReload: true,
+            preservesOpportunityState: true
+        )
+    }
+
+    private func refreshHomeData(
+        clearsExistingData: Bool,
+        allowsCachedTideFallback: Bool,
+        forcesNetworkReload: Bool,
+        preservesOpportunityState: Bool = false
+    ) async {
+        if forcesNetworkReload {
+            prepareForHardHomeRefresh(preservesOpportunityState: preservesOpportunityState)
+        }
+        await refreshFullData(
+            clearsExistingData: clearsExistingData && !forcesNetworkReload,
+            allowsCachedTideFallback: allowsCachedTideFallback
+        )
+        await refreshOpportunities(clearsExistingData: false)
+        await refreshDecisionSummary()
     }
 
     func loadOpportunitiesIfNeeded() async {
         guard opportunityRecommendations.isEmpty else { return }
-        await refreshOpportunities()
+        await refreshOpportunities(clearsExistingData: false)
+        await refreshDecisionSummary()
     }
 
-    func refreshOpportunities() async {
+    func refreshOpportunities(clearsExistingData: Bool = false) async {
         opportunityRefreshGeneration += 1
         let generation = opportunityRefreshGeneration
         isLoadingOpportunities = true
         opportunityErrorMessage = nil
+        if clearsExistingData {
+            clearOpportunityData(clearFeedback: false)
+        }
         defer {
             if generation == opportunityRefreshGeneration {
                 isLoadingOpportunities = false
@@ -506,14 +795,18 @@ final class AppModel: ObservableObject {
             let response = try await opportunityClient.scan(
                 location: location,
                 clientID: opportunityClientIDStore.loadOrCreate(),
-                interests: interests.isEmpty ? OpportunityActivity.all.map(\.id) : interests
+                interests: interests.isEmpty ? OpportunityActivity.clientAnchorIDs : interests
             )
             guard generation == opportunityRefreshGeneration else { return }
-            opportunityRecommendations = response.recommendations
+            opportunityRecommendations = response.recommendations.filter(isDisplayableOpportunityRecommendation)
             opportunityAttribution = response.attribution
             opportunityFetchedAt = response.fetchedAt
+            llmDecisionHeadline = nil
+            llmDecisionSummary = nil
         } catch {
             guard generation == opportunityRefreshGeneration else { return }
+            llmDecisionHeadline = nil
+            llmDecisionSummary = nil
             if let urlError = error as? URLError {
                 opportunityErrorMessage = "Could not scan opportunities (\(urlError.code.rawValue)). Pull to retry."
             } else {
@@ -528,7 +821,10 @@ final class AppModel: ObservableObject {
         } else {
             selectedOpportunityInterestIDs.insert(id)
         }
-        Task { await refreshOpportunities() }
+        Task {
+            await refreshOpportunities(clearsExistingData: true)
+            await refreshDecisionSummary()
+        }
     }
 
     func submitOpportunityFeedback(recommendation: OpportunityRecommendation, feedback: OpportunityFeedback, label: String) {
@@ -549,6 +845,57 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func setHighConfidenceBoatingAlertsEnabled(_ enabled: Bool) {
+        highConfidenceBoatingAlertsEnabled = enabled
+        boatingAlertService.setAlertsEnabled(enabled)
+        if enabled {
+            Task {
+                await prepareBoatingAlertsForStartup()
+                await runBoatingAlertCheckNow()
+            }
+        } else {
+            boatingAlertLastResultText = "Alerts are off."
+        }
+    }
+
+    func runBoatingAlertCheckNow() async {
+        let result = await boatingAlertService.checkForAlert(location: effectiveLocation(), canRequestAuthorization: true)
+        boatingAlertLastResultText = result.message
+        await refreshBoatingAlertStatus()
+        scheduleBoatingAlertRefreshIfNeeded()
+    }
+
+    func handleBoatingAlertBackgroundTask() async {
+        let result = await boatingAlertService.checkForAlert(location: effectiveLocation(), canRequestAuthorization: false)
+        boatingAlertLastResultText = result.message
+        await refreshBoatingAlertStatus()
+        scheduleBoatingAlertRefreshIfNeeded()
+    }
+
+    func scheduleBoatingAlertRefreshIfNeeded() {
+        if highConfidenceBoatingAlertsEnabled {
+            BoatingAlertScheduler.scheduleNextCheck()
+        } else {
+            BoatingAlertScheduler.cancelScheduledChecks()
+        }
+    }
+
+    private func prepareBoatingAlertsForStartup() async {
+        highConfidenceBoatingAlertsEnabled = boatingAlertService.alertsEnabled
+        if highConfidenceBoatingAlertsEnabled {
+            _ = await boatingAlertService.requestAuthorizationIfNeeded()
+            scheduleBoatingAlertRefreshIfNeeded()
+        }
+        await refreshBoatingAlertStatus()
+    }
+
+    private func refreshBoatingAlertStatus() async {
+        boatingAlertAuthorizationText = await boatingAlertService.authorizationText()
+        boatingAlertLastCheckText = boatingAlertService.lastCheckDate.map {
+            Self.relativeDateFormatter.localizedString(for: $0, relativeTo: Date())
+        }
+    }
+
     private func refreshFullData(clearsExistingData: Bool, allowsCachedTideFallback: Bool) async {
         refreshGeneration += 1
         let generation = refreshGeneration
@@ -566,7 +913,7 @@ final class AppModel: ObservableObject {
 
         let request = makeRequest()
         do {
-            async let forecastTask = forecastService.fetchSevenDayForecast(request: request)
+            async let forecastTask = forecastService.fetchForecast(request: request)
             async let tideTask: TideForecast? = try? tideProvider.fetchTideForecast(
                 location: request.location,
                 start: Date(),
@@ -579,7 +926,7 @@ final class AppModel: ObservableObject {
             guard isCurrentRefresh(generation) else { return }
 
             output = forecast
-            warningBanner = forecast.daily.prefix(4).contains(where: \.warningLimited) ? forecast.warnings.first?.title : nil
+            warningBanner = forecast.daily.prefix(Self.localForecastDisplayDays).contains(where: \.warningLimited) ? forecast.warnings.first?.title : nil
             selectedDayIndex = 0
             errorMessage = forecast.degradedReason
 
@@ -665,7 +1012,7 @@ final class AppModel: ObservableObject {
         MarineForecastRequest(
             location: effectiveLocation(),
             feed: effectiveFeedConfig(),
-            forecastDays: 7
+            forecastDays: Self.localForecastRequestDays
         )
     }
 
@@ -716,22 +1063,30 @@ final class AppModel: ObservableObject {
     }
 
     private func refreshAfterLocationChange() {
-        refreshGeneration += 1
-        opportunityRefreshGeneration += 1
-        let shouldRefreshOpportunities = isLoadingOpportunities || opportunityFetchedAt != nil || !opportunityRecommendations.isEmpty
-        isLoading = true
-        errorMessage = nil
-        opportunityErrorMessage = nil
-        clearDisplayedData(clearStoredTide: true)
-        opportunityRecommendations = []
-        opportunityFetchedAt = nil
-        opportunityAttribution = nil
-        opportunityFeedback = [:]
+        prepareForHardHomeRefresh(preservesOpportunityState: false)
         Task {
             await refreshFullData(clearsExistingData: false, allowsCachedTideFallback: false)
-            if shouldRefreshOpportunities {
-                await refreshOpportunities()
-            }
+            await refreshOpportunities(clearsExistingData: false)
+            await refreshDecisionSummary()
+        }
+    }
+
+    private func prepareForHardHomeRefresh(preservesOpportunityState: Bool) {
+        refreshGeneration += 1
+        opportunityRefreshGeneration += 1
+        decisionSummaryGeneration += 1
+        URLCache.shared.removeAllCachedResponses()
+
+        isLoading = true
+        isLoadingOpportunities = true
+        isGeneratingDecisionSummary = false
+        errorMessage = nil
+        opportunityErrorMessage = nil
+        tideStatusMessage = nil
+
+        clearDisplayedData(clearStoredTide: true)
+        if !preservesOpportunityState {
+            clearOpportunityData(clearFeedback: true)
         }
     }
 
@@ -741,9 +1096,80 @@ final class AppModel: ObservableObject {
         warningBanner = nil
         tideStatusMessage = nil
         selectedDayIndex = 0
+        decisionSummaryGeneration += 1
+        llmDecisionHeadline = nil
+        llmDecisionSummary = nil
+        isGeneratingDecisionSummary = false
         if clearStoredTide {
             tideStore.save(nil)
         }
+    }
+
+    private func clearOpportunityData(clearFeedback: Bool) {
+        opportunityRecommendations = []
+        opportunityFetchedAt = nil
+        opportunityAttribution = nil
+        decisionSummaryGeneration += 1
+        llmDecisionHeadline = nil
+        llmDecisionSummary = nil
+        isGeneratingDecisionSummary = false
+        if clearFeedback {
+            opportunityFeedback = [:]
+        }
+    }
+
+    private func refreshDecisionSummary() async {
+        decisionSummaryGeneration += 1
+        let generation = decisionSummaryGeneration
+        llmDecisionHeadline = nil
+        llmDecisionSummary = nil
+
+        guard let context = makeDecisionSummaryContext() else {
+            isGeneratingDecisionSummary = false
+            return
+        }
+
+        isGeneratingDecisionSummary = true
+        let generated = await decisionSummaryGenerator.generate(context: context)
+        guard generation == decisionSummaryGeneration else { return }
+
+        llmDecisionHeadline = generated?.headline
+        llmDecisionSummary = generated?.summary
+        isGeneratingDecisionSummary = false
+    }
+
+    private func makeDecisionSummaryContext() -> DecisionSummaryContext? {
+        let summary = heroOpportunitySummary
+        let fallback = summary.subheadline.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !summary.headline.isEmpty || !fallback.isEmpty else { return nil }
+
+        let recommendation = backendBoatingRecommendation
+        let evidence = marineEvidenceStatus
+        let tideEvents = tideEventsForDecision(recommendation: recommendation)
+        return DecisionSummaryContext(
+            locationName: activeLocationName,
+            headline: summary.headline,
+            fallbackSummary: fallback,
+            windowText: recommendation.map { opportunityWindowText(for: $0.window) },
+            scoreText: recommendation.map { "\(Int($0.finalScore.rounded()))/100" },
+            decisionLabel: recommendation?.analysis?.band ?? recommendation?.decisionLabel,
+            verdict: recommendation?.verdict,
+            marineEvidenceTitle: evidence.title,
+            marineEvidenceDetail: evidence.detail,
+            windText: heroWindText,
+            wavesText: heroWavesText,
+            tideText: tideSummaryForDecision(recommendation: recommendation),
+            tideEvents: tideEvents,
+            warningText: warningBanner,
+            confidence: recommendation?.confidence,
+            priority: recommendation?.priority,
+            reasons: recommendation?.reasons ?? [],
+            riskFlags: recommendation?.riskFlags ?? [],
+            dataSignals: recommendation?.analysis?.dataSignals ?? [],
+            sourceStatus: recommendation?.analysis?.sourceStatus ?? [],
+            forecastDays: decisionForecastDaySummaries(),
+            topDrivers: visibleDriverTexts(from: heroFocusDrivers)
+        )
     }
 
     private func isCurrentRefresh(_ generation: Int) -> Bool {
@@ -778,7 +1204,232 @@ final class AppModel: ObservableObject {
 
     private var heroFocusDrivers: [String] {
         let drivers = heroOpportunitySummary.focusDrivers
-        return drivers.isEmpty ? topDrivers : drivers
+        return drivers.isEmpty ? topDrivers : (drivers + topDrivers).uniquePrefix(6)
+    }
+
+    private func backendHeroOpportunitySummary(for recommendation: OpportunityRecommendation) -> HeroOpportunitySummary {
+        let label = backendDecisionLabel(for: recommendation)
+        let tone = backendTone(for: recommendation, label: label)
+        let headline = recommendation.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? backendFallbackHeadline(for: recommendation, tone: tone)
+            : recommendation.title
+        let summary = firstUsefulText([
+            recommendation.analysis?.summary,
+            recommendation.description,
+            recommendation.reasons.first
+        ]) ?? "Backend boating analysis is available for this window."
+        return HeroOpportunitySummary(
+            headline: headline,
+            subheadline: summary,
+            tone: tone,
+            badgeText: backendBadgeText(for: recommendation, label: label, tone: tone),
+            focusDrivers: backendFocusDrivers(from: recommendation)
+        )
+    }
+
+    private func backendDecisionLabel(for recommendation: OpportunityRecommendation) -> String {
+        firstUsefulText([
+            recommendation.analysis?.band,
+            recommendation.decisionLabel,
+            recommendation.verdict
+        ])?.lowercased() ?? ""
+    }
+
+    private func backendTone(for recommendation: OpportunityRecommendation, label: String) -> BoatDayRating {
+        if label.contains("day_for_it") {
+            return .green
+        }
+        if label.contains("wind_led_watch") || label.contains("worth_watching") || label.contains("watch") {
+            return .amber
+        }
+        if label.contains("not") || label.contains("marginal") || recommendation.finalScore < 55 {
+            return .red
+        }
+        if recommendation.finalScore >= 82 {
+            return .green
+        }
+        return .amber
+    }
+
+    private func backendBadgeText(for recommendation: OpportunityRecommendation, label: String, tone: BoatDayRating) -> String {
+        if label.contains("day_for_it") || tone == .green {
+            return "DAY FOR IT"
+        }
+        if label.contains("wind_led_watch") {
+            return "WIND WATCH"
+        }
+        if label.contains("watch") || recommendation.verdict.lowercased().contains("watch") || tone == .amber {
+            return "WATCH"
+        }
+        return "HOLD"
+    }
+
+    private func backendFallbackHeadline(for recommendation: OpportunityRecommendation, tone: BoatDayRating) -> String {
+        let window = opportunityWindowText(for: recommendation.window)
+        switch tone {
+        case .green:
+            return "Day for it: \(window)"
+        case .amber:
+            if recommendation.analysis?.band == "wind_led_watch" {
+                return "Wind watch: \(window)"
+            }
+            return "Boating watch: \(window)"
+        case .red:
+            return "Hold off: \(window)"
+        }
+    }
+
+    private func backendFocusDrivers(from recommendation: OpportunityRecommendation) -> [String] {
+        let factorTexts = (recommendation.analysis?.factors ?? []).map { factor in
+            let detail = factor.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+            if detail.isEmpty {
+                return "\(factor.label): \(Int(factor.score.rounded()))"
+            }
+            return "\(factor.label): \(detail)"
+        }
+        return (
+            factorTexts +
+            recommendation.reasons +
+            (recommendation.analysis?.dataSignals ?? []) +
+            recommendation.riskFlags
+        )
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+        .uniquePrefix(6)
+    }
+
+    private func marineEvidenceStatus(for recommendation: OpportunityRecommendation) -> MarineEvidenceStatus {
+        let seaDetail = firstUsefulText([
+            explicitSeaSignalText(for: recommendation),
+            seaFactorDetail(for: recommendation)
+        ])
+
+        if recommendationHasKnownSeaData(recommendation) {
+            return MarineEvidenceStatus(
+                title: waveSwellEvidenceTitle(for: recommendation),
+                detail: seaDetail ?? "Wave height or swell height is part of this score.",
+                valueText: heroWavesText,
+                isConfirmed: true
+            )
+        }
+
+        let detail: String
+        if recommendation.analysis?.band == "wind_led_watch" {
+            detail = "Low wind is only a candidate signal until wave height and swell data confirm it."
+        } else {
+            detail = seaFactorDetail(for: recommendation) ?? "No explicit wave height or swell signal is available for this window."
+        }
+
+        return MarineEvidenceStatus(
+            title: "Wave/swell missing",
+            detail: detail,
+            valueText: "Awaiting waves",
+            isConfirmed: false
+        )
+    }
+
+    private func waveSwellEvidenceTitle(for recommendation: OpportunityRecommendation) -> String {
+        let signals = recommendation.analysis?.dataSignals ?? []
+        let hasWave = signals.contains { $0.lowercased().hasPrefix("wave ") }
+        let hasSwell = signals.contains { $0.lowercased().hasPrefix("swell ") }
+        let hasPeriod = signals.contains { $0.lowercased().hasPrefix("period ") }
+
+        if hasWave && hasSwell && hasPeriod {
+            return "Wave + swell + period"
+        }
+        if hasWave && hasSwell {
+            return "Wave + swell data"
+        }
+        if hasWave {
+            return "Wave height data"
+        }
+        if hasSwell {
+            return "Swell height data"
+        }
+        return "Wave/swell model"
+    }
+
+    private func recommendationHasKnownSeaData(_ recommendation: OpportunityRecommendation) -> Bool {
+        let signals = recommendation.analysis?.dataSignals ?? []
+        let hasExplicitSignal = signals.contains { signal in
+            let lower = signal.lowercased()
+            return lower.hasPrefix("wave ") || lower.hasPrefix("swell ")
+        }
+
+        let seaDetail = seaFactorDetail(for: recommendation)?.lowercased() ?? ""
+        let hasExplicitFactor = seaDetail.contains("roughness index") && !seaDetail.contains("estimated from wind")
+
+        let sourceStatus = recommendation.analysis?.sourceStatus.map { $0.lowercased() } ?? []
+        let waveMissing = sourceStatus.contains { $0.contains("wave_height") && $0.contains("missing") }
+        let swellMissing = sourceStatus.contains { $0.contains("swell_height") && $0.contains("missing") }
+        let explicitlyEstimated = seaDetail.contains("estimated from wind") || recommendation.analysis?.band == "wind_led_watch"
+
+        return (hasExplicitSignal || hasExplicitFactor) && !(waveMissing && swellMissing) && !explicitlyEstimated
+    }
+
+    private func isDisplayableOpportunityRecommendation(_ recommendation: OpportunityRecommendation) -> Bool {
+        guard recommendation.activity == "boating" else { return true }
+        return isDefaultBoatingDaylightWindow(recommendation.window)
+    }
+
+    private func isDefaultBoatingDaylightWindow(_ window: OpportunityRecommendation.Window) -> Bool {
+        let calendar = Calendar.current
+        guard calendar.isDate(window.start, inSameDayAs: window.end) else {
+            return false
+        }
+        let startMinutes = calendar.component(.hour, from: window.start) * 60 + calendar.component(.minute, from: window.start)
+        let endMinutes = calendar.component(.hour, from: window.end) * 60 + calendar.component(.minute, from: window.end)
+        return startMinutes >= 5 * 60 && endMinutes <= 18 * 60
+    }
+
+    private func explicitSeaSignalText(for recommendation: OpportunityRecommendation) -> String? {
+        let seaSignals = (recommendation.analysis?.dataSignals ?? []).filter { signal in
+            let lower = signal.lowercased()
+            return lower.hasPrefix("wave ") || lower.hasPrefix("swell ") || lower.hasPrefix("period ")
+        }
+        guard !seaSignals.isEmpty else { return nil }
+        return seaSignals.prefix(3).joined(separator: " · ")
+    }
+
+    private func seaFactorDetail(for recommendation: OpportunityRecommendation) -> String? {
+        let factor = recommendation.analysis?.factors.first { factor in
+            let lowerID = factor.id.lowercased()
+            let lowerLabel = factor.label.lowercased()
+            return lowerID.contains("sea") || lowerID.contains("swell") || lowerID.contains("wave") ||
+                lowerLabel.contains("sea") || lowerLabel.contains("swell") || lowerLabel.contains("wave")
+        }
+        let detail = factor?.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        return detail?.isEmpty == false ? detail : nil
+    }
+
+    private func localKnownSeaDetail() -> String? {
+        let drivers = visibleDriverTexts(from: heroFocusDrivers)
+        return drivers.first { line in
+            let lower = line.lowercased()
+            let hasSeaWord = lower.contains("sea") || lower.contains("swell") || lower.contains("wave")
+            let isWindEstimate = lower.contains("estimated from wind") || lower.contains("wind proxy")
+            return hasSeaWord && !isWindEstimate
+        }
+    }
+
+    private func opportunityWindowText(for window: OpportunityRecommendation.Window) -> String {
+        let calendar = Calendar.current
+        let dayText: String
+        if calendar.isDateInToday(window.start) {
+            dayText = "Today"
+        } else if calendar.isDateInTomorrow(window.start) {
+            dayText = "Tomorrow"
+        } else {
+            dayText = Self.shortDayFormatter.string(from: window.start)
+        }
+        return "\(dayText), \(Self.compactTimeText(from: window.start))"
+    }
+
+    private func firstUsefulText(_ values: [String?]) -> String? {
+        values.compactMap { value in
+            let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed?.isEmpty == false ? trimmed : nil
+        }.first
     }
 
     private func conciseReason(from drivers: [String]) -> String? {
@@ -802,9 +1453,33 @@ final class AppModel: ObservableObject {
         case .unavailable:
             parts.append("limited official data")
         }
+        parts.append(seaSignalContextText(for: day))
         parts.append("\(day.confidence.lowercased()) confidence")
         parts.append(day.warningLimited ? "warning cap applied" : "sea state weighted first")
         return parts.joined(separator: " · ")
+    }
+
+    private func forecastEvidenceLabel(for day: DailyMarineSummary) -> String {
+        let hasSeaSignal = seaSignalContextText(for: day) == "wave/swell signal present"
+        switch day.confidence.lowercased() {
+        case "high":
+            return hasSeaSignal ? "Wave + swell" : "Wind/tide/rain"
+        case "medium":
+            return hasSeaSignal ? "Wave data" : "Wind + tide"
+        default:
+            return hasSeaSignal ? "Limited waves" : "Wind only"
+        }
+    }
+
+    private func seaSignalContextText(for day: DailyMarineSummary) -> String {
+        let drivers = visibleDriverTexts(from: day.topDrivers)
+        let hasKnownSeaSignal = drivers.contains { line in
+            let lower = line.lowercased()
+            let hasSeaWord = lower.contains("sea") || lower.contains("swell") || lower.contains("wave")
+            let isWindEstimate = lower.contains("estimated from wind") || lower.contains("wind proxy")
+            return hasSeaWord && !isWindEstimate
+        }
+        return hasKnownSeaSignal ? "wave/swell signal present" : "wind is supplementary"
     }
 
     private func dayLabel(for date: Date, index: Int) -> String {
@@ -881,11 +1556,56 @@ final class AppModel: ObservableObject {
         return "\(prefix) \(time)"
     }
 
+    private func tideSummaryForDecision(recommendation: OpportunityRecommendation?) -> String {
+        let page = tidePageForDecision(recommendation: recommendation)
+        let events = tideEventsInDisplayWindow(for: page).map(tideEventSummary)
+        if !events.isEmpty {
+            return "\(page.dayLabel) tides: \(events.joined(separator: "; "))"
+        }
+        return heroTideText
+    }
+
+    private func tideEventsForDecision(recommendation: OpportunityRecommendation?) -> [String] {
+        tideEventsInDisplayWindow(for: tidePageForDecision(recommendation: recommendation))
+            .map(tideEventSummary)
+    }
+
+    private func tidePageForDecision(recommendation: OpportunityRecommendation?) -> TideCardViewData {
+        let referenceDate = recommendation?.window.start ?? selectedDaySummary?.dayStart ?? Date()
+        let pages = tidePageViewData
+        return pages.first { page in
+            referenceDate >= page.axisStart && referenceDate < page.axisEnd
+        } ?? tideCardViewData
+    }
+
+    private func decisionForecastDaySummaries() -> [String] {
+        fourDayDetailPages.map { page in
+            let score = page.scoreValue.map { "\(Int($0.rounded()))" } ?? "unscored"
+            return "\(page.dayLabel): \(score), \(page.rating.label), \(page.evidenceText), \(page.summaryText)"
+        }
+    }
+
+    private func tideEventsInDisplayWindow(for page: TideCardViewData) -> [TideEventViewPoint] {
+        page.events
+            .filter { $0.time >= page.axisStart && $0.time < page.axisEnd }
+            .sorted { $0.time < $1.time }
+    }
+
+    private func tideEventSummary(_ event: TideEventViewPoint) -> String {
+        let kind = event.kind == .high ? "High" : "Low"
+        let time = Self.timeFormatter.string(from: event.time)
+        if let height = event.heightMeters {
+            return "\(kind) \(time) \(String(format: "%.2f m", height))"
+        }
+        return "\(kind) \(time)"
+    }
+
     private func buildTideCardViewData(pageOffset: Int) -> TideCardViewData {
         let calendar = Calendar.current
         let now = Date()
-        let axisStart = calendar.date(byAdding: .hour, value: pageOffset * 24, to: now) ?? now
-        let axisEnd = calendar.date(byAdding: .hour, value: 24, to: axisStart) ?? axisStart
+        let todayStart = calendar.startOfDay(for: now)
+        let axisStart = calendar.date(byAdding: .day, value: pageOffset, to: todayStart) ?? todayStart
+        let axisEnd = calendar.date(byAdding: .day, value: 1, to: axisStart) ?? axisStart
         let eventLookback = calendar.date(byAdding: .hour, value: -6, to: axisStart) ?? axisStart
         let eventLookahead = calendar.date(byAdding: .hour, value: 6, to: axisEnd) ?? axisEnd
 
@@ -896,7 +1616,7 @@ final class AppModel: ObservableObject {
 
         let providerSamples = (tideForecast?.days ?? [])
             .flatMap(\.samples)
-            .filter { $0.time >= axisStart && $0.time <= axisEnd }
+            .filter { $0.time >= axisStart && $0.time < axisEnd }
             .sorted { $0.time < $1.time }
 
         let chosenEvents = authoritativeEvents.map {
@@ -919,7 +1639,7 @@ final class AppModel: ObservableObject {
                 )
             }
             series = .sampled(points)
-            note = "Official tide samples · 24h window"
+            note = "Official tide samples · midnight to midnight"
         } else if !chosenEvents.isEmpty {
             let interpolationInput = chosenEvents.map {
                 TideEventPoint(
@@ -933,14 +1653,15 @@ final class AppModel: ObservableObject {
                 TideSamplePoint(time: $0.time, heightMeters: $0.heightMeters, isDerived: true)
             }
             series = points.isEmpty ? .unavailable : .eventInterpolated(points)
-            note = "Interpolated from official tide extrema · 24h window"
+            note = "Interpolated from official tide extrema · midnight to midnight"
         } else {
             series = .unavailable
             note = "Official tide data unavailable."
         }
 
-        let nextHigh = chosenEvents.first(where: { $0.kind == .high && $0.time >= axisStart && $0.time <= axisEnd }) ?? chosenEvents.first(where: { $0.kind == .high && $0.time >= axisStart })
-        let nextLow = chosenEvents.first(where: { $0.kind == .low && $0.time >= axisStart && $0.time <= axisEnd }) ?? chosenEvents.first(where: { $0.kind == .low && $0.time >= axisStart })
+        let nextHigh = chosenEvents.first(where: { $0.kind == .high && $0.time >= axisStart && $0.time < axisEnd }) ?? chosenEvents.first(where: { $0.kind == .high && $0.time >= axisStart })
+        let nextLow = chosenEvents.first(where: { $0.kind == .low && $0.time >= axisStart && $0.time < axisEnd }) ?? chosenEvents.first(where: { $0.kind == .low && $0.time >= axisStart })
+        let chartMaximumMeters = tideChartMaximumMeters(series: series, events: chosenEvents)
         let stateLabel = tideStateLabel(
             pageOffset: pageOffset,
             now: now,
@@ -959,8 +1680,24 @@ final class AppModel: ObservableObject {
             series: series,
             axisStart: axisStart,
             axisEnd: axisEnd,
+            chartMaximumMeters: chartMaximumMeters,
             note: tideStatusMessage ?? note
         )
+    }
+
+    private func tideChartMaximumMeters(series: TideSeriesSource, events: [TideEventViewPoint]) -> Double {
+        let sampleHeights: [Double]
+        switch series {
+        case let .sampled(points), let .eventInterpolated(points):
+            sampleHeights = points.map(\.heightMeters)
+        case .unavailable:
+            sampleHeights = []
+        }
+        let visibleMaximum = (sampleHeights + events.compactMap(\.heightMeters))
+            .filter { $0.isFinite && $0 > 0 }
+            .max() ?? 0
+        let stationMaximum = tideForecast?.chartMaximumMeters ?? Self.defaultTideChartMaximumMeters
+        return max(1.0, stationMaximum, visibleMaximum)
     }
 
     private func tidePageLabel(for date: Date, offset: Int) -> String {
@@ -968,8 +1705,7 @@ final class AppModel: ObservableObject {
     }
 
     private func tideWindowLabel(from start: Date, to end: Date, offset: Int) -> String {
-        if offset == 0 { return "Next 24h" }
-        return "\(Self.shortDayFormatter.string(from: start)) \(Self.timeFormatter.string(from: start)) to \(Self.timeFormatter.string(from: end))"
+        "Midnight to midnight"
     }
 
     private func tideStateLabel(
@@ -1022,6 +1758,21 @@ final class AppModel: ObservableObject {
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "h:mm a"
+        f.amSymbol = "am"
+        f.pmSymbol = "pm"
+        return f
+    }()
+
+    private static func compactTimeText(from date: Date) -> String {
+        let minute = Calendar.current.component(.minute, from: date)
+        return (minute == 0 ? hourOnlyTimeFormatter : timeFormatter).string(from: date)
+    }
+
+    private static let hourOnlyTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h a"
+        f.amSymbol = "am"
+        f.pmSymbol = "pm"
         return f
     }()
 
@@ -1043,8 +1794,10 @@ final class AppModel: ObservableObject {
         return f
     }()
 
-    // Placeholder for upstream-generated summary integration.
-    private var llmDecisionSummary: String? { nil }
+    private static let localForecastRequestDays = 10
+    private static let localForecastDisplayDays = 7
+    private static let defaultTideChartMaximumMeters = 4.0
+
 }
 
 private struct TideStore {

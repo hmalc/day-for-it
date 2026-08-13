@@ -10,8 +10,11 @@ public struct BOMHTTPClient: Sendable {
     public func data(from url: URL) async throws -> Data {
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         request.setValue(BOMConfig.userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("application/json, text/xml, */*", forHTTPHeaderField: "Accept")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.setValue("no-cache", forHTTPHeaderField: "Pragma")
         var lastError: Error?
         for attempt in 0..<3 {
             do {
@@ -39,6 +42,8 @@ public struct BOMHTTPClient: Sendable {
         config.waitsForConnectivity = true
         config.timeoutIntervalForRequest = 20
         config.timeoutIntervalForResource = 45
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.urlCache = nil
         return URLSession(configuration: config)
     }
 
